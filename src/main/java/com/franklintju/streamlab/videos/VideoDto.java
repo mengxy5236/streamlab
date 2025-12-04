@@ -1,21 +1,20 @@
 package com.franklintju.streamlab.videos;
 
 import lombok.Data;
+
 import java.time.Instant;
 
 @Data
 public class VideoDto {
-    Long id;
-    String title;
-    String description;
-    String coverUrl;
-    String videoUrl;
-    String category;
-    Integer viewsCount;
-    Integer likesCount;
-    Integer coinsCount;
-    Integer favoritesCount;
-    Integer commentsCount;
-    Integer sharesCount;
-    Instant updatedAt;
+
+    private Long id;
+    private String title;
+    private String description;
+    private String coverUrl;
+    private String videoUrl;
+    private Integer duration;
+    private Long fileSize;
+    private String status;
+    private Instant updatedAt;
+    private Instant publishedAt;
 }

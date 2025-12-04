@@ -12,25 +12,25 @@ import java.time.Instant;
 @Entity
 @Table(name = "videos")
 public class Video {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(name = "title")
+    @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Column(name = "description")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "cover_url")
+    @Column(name = "cover_url", length = 500)
     private String coverUrl;
 
-    @Column(name = "video_url")
+    @Column(name = "video_url", length = 500)
     private String videoUrl;
 
     @Column(name = "duration")
@@ -40,29 +40,8 @@ public class Video {
     private Long fileSize;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status")
-    private VideoStatus status;
-
-    @Column(name = "category")
-    private String category;
-
-    @Column(name = "views_count")
-    private Integer viewsCount;
-
-    @Column(name = "likes_count")
-    private Integer likesCount;
-
-    @Column(name = "coins_count")
-    private Integer coinsCount;
-
-    @Column(name = "favorites_count")
-    private Integer favoritesCount;
-
-    @Column(name = "comments_count")
-    private Integer commentsCount;
-
-    @Column(name = "shares_count")
-    private Integer sharesCount;
+    @Column(name = "status", nullable = false)
+    private VideoStatus status = VideoStatus.UPLOADING;
 
     @Column(name = "updated_at")
     private Instant updatedAt;
@@ -70,29 +49,17 @@ public class Video {
     @Column(name = "published_at")
     private Instant publishedAt;
 
-    private enum VideoStatus {
-        UPLOADING, TRANSCODING, PUBLISHED, DELETED
+    @PrePersist
+    protected void onCreate() {
+        updatedAt = Instant.now();
     }
 
-    public static Video createNew(User user, VideoDto dto) {
-        Video video = new Video();
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = Instant.now();
+    }
 
-        video.setUser(user);
-        video.setTitle(dto.getTitle());
-        video.setDescription(dto.getDescription());
-        video.setCategory(dto.getCategory());
-
-        video.setCoinsCount(0);
-        video.setLikesCount(0);
-        video.setCommentsCount(0);
-        video.setFavoritesCount(0);
-        video.setSharesCount(0);
-        video.setViewsCount(0);
-
-        video.setStatus(VideoStatus.UPLOADING);
-        video.setPublishedAt(Instant.now());
-        video.setUpdatedAt(Instant.now());
-
-        return video;
+    public enum VideoStatus {
+        UPLOADING, TRANSCODING, PUBLISHED, DELETED
     }
 }
