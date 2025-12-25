@@ -1,4 +1,4 @@
-package com.franklintju.streamlab.stats;
+package com.franklintju.streamlab.videos;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;

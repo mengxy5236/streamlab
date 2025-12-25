@@ -34,7 +34,7 @@ public class Danmaku {
     private BigDecimal sendTime;
 
     @Column(name = "mode")
-    private Integer mode = 1;
+    private Byte mode = 1;
 
     @Column(name = "font_size")
     private Integer fontSize = 25;

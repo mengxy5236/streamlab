@@ -4,6 +4,7 @@ import com.franklintju.streamlab.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.time.Instant;
 
@@ -26,6 +27,7 @@ public class UserFollow {
     @JoinColumn(name = "following_id")
     private User following;
 
+    @CreatedDate
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 

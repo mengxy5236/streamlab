@@ -1,6 +1,5 @@
-package com.franklintju.streamlab.stats;
+package com.franklintju.streamlab.videos;
 
-import com.franklintju.streamlab.videos.Video;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

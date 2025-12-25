@@ -19,17 +19,17 @@ public class VideoCoin {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_id", nullable = false)
+    @JoinColumn(name = "video_id")
     private Video video;
 
-    @Column(name = "amount", nullable = false)
+    @Column(name = "amount")
     private Integer amount = 1;
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at")
     private Instant createdAt;
 
     @PrePersist

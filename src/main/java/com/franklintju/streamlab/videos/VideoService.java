@@ -1,5 +1,7 @@
 package com.franklintju.streamlab.videos;
 
+import com.franklintju.streamlab.upload.UploadTask;
+import com.franklintju.streamlab.upload.UploadTaskRepository;
 import com.franklintju.streamlab.users.UserNotFoundException;
 import com.franklintju.streamlab.users.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +17,7 @@ public class VideoService {
     private final UserRepository userRepository;
     private final VideoRepository videoRepository;
     private final VideoMapper videoMapper;
+    private final UploadTaskRepository uploadTaskRepository;
 
     public List<VideoDto> getVideos(Long userId) {
         var videos = videoRepository.findByUserId(userId);
@@ -32,6 +35,7 @@ public class VideoService {
 
     @Transactional
     public VideoDto uploadVideo(Long userId, VideoDto videoDto) {
+
         var user = userRepository.findById(userId)
                 .orElseThrow(UserNotFoundException::new);
 
@@ -40,8 +44,13 @@ public class VideoService {
         video.setTitle(videoDto.getTitle());
         video.setDescription(videoDto.getDescription());
         video.setStatus(Video.VideoStatus.UPLOADING);
-
         videoRepository.save(video);
+
+        var task = new UploadTask();
+        task.setUser(user);
+        task.setVideo(video);
+        uploadTaskRepository.save(task);
+
         return videoMapper.toDto(video);
     }
 }

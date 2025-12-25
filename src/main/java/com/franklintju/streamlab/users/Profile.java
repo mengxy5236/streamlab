@@ -1,9 +1,11 @@
-package com.franklintju.streamlab.profiles;
+package com.franklintju.streamlab.users;
 
-import com.franklintju.streamlab.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -11,6 +13,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @Entity
+@EntityListeners(AuditingEntityListener.class)
 @Table(name = "profiles")
 public class Profile {
     @Id
@@ -18,7 +21,7 @@ public class Profile {
     @Column(name = "id")
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false, orphanRemoval = true)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
@@ -39,24 +42,26 @@ public class Profile {
     private LocalDate birthday;
 
     @Column(name = "level")
-    private Integer level;
+    private Integer level = 0;
 
     @Column(name = "coins")
-    private Integer coins;
+    private Integer coins = 0;
 
     @Column(name = "followers_count")
-    private Integer followersCount;
+    private Integer followersCount = 0;
 
     @Column(name = "following_count")
-    private Integer followingCount;
+    private Integer followingCount = 0;
 
+    @CreatedDate
     @Column(name = "created_at")
     private Instant createdAt;
 
+    @LastModifiedDate
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    private enum Gender {
+    public enum Gender {
         MALE, FEMALE, OTHER
     }
 }
