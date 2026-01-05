@@ -1,8 +1,6 @@
 package com.franklintju.streamlab.follow;
 
 import com.franklintju.streamlab.follow.mapper.FollowMapper;
-import com.franklintju.streamlab.users.Profile;
-import com.franklintju.streamlab.users.ProfileRepository;
 import com.franklintju.streamlab.users.UserNotFoundException;
 import com.franklintju.streamlab.users.UserRepository;
 import lombok.AllArgsConstructor;
@@ -19,7 +17,6 @@ public class FollowService {
     private final UserRepository userRepository;
     private final UserFollowRepository userFollowRepository;
     private final FollowMapper followMapper;
-    private final ProfileRepository profileRepository;
 
     @Transactional
     public void follow(FollowRequest request){

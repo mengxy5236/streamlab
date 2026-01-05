@@ -1,5 +1,6 @@
 package com.franklintju.streamlab.upload;
 
+import com.franklintju.streamlab.videos.Video;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,5 +16,7 @@ public interface UploadTaskRepository extends JpaRepository<UploadTask, Long> {
     List<UploadTask> findByUserIdAndStatus(Long userId, UploadTask.TaskStatus status);
 
     long countByUserIdAndStatus(Long userId, UploadTask.TaskStatus status);
+
+    boolean existsByVideoId(Long videoId);
 }
 

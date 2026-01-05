@@ -1,13 +1,13 @@
 package com.franklintju.streamlab.users;
 
+import com.franklintju.streamlab.videos.VideoDto;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Map;
+import java.util.List;
 
 @AllArgsConstructor
 @RestController
@@ -49,10 +49,17 @@ public class UserController {
     @PostMapping("/{id}/change-password")
     public ResponseEntity<Void> changePassword(
             @PathVariable Long id,
-            @RequestBody changePasswordRequest request
+            @Valid @RequestBody changePasswordRequest request
     ){
         userService.changePassword(id,request);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/videos")
+    public ResponseEntity<List<VideoDto>> getVideos(
+            @PathVariable Long id
+    ){
+        return ResponseEntity.ok(userService.getVideos(id));
     }
 
 }

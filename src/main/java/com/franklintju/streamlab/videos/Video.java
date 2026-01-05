@@ -4,6 +4,8 @@ import com.franklintju.streamlab.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 
 import java.time.Instant;
 
@@ -33,6 +35,7 @@ public class Video {
     @Column(name = "video_url", length = 500)
     private String videoUrl;
 
+    // max length : 8h (28800)
     @Column(name = "duration")
     private Integer duration;
 
@@ -43,9 +46,11 @@ public class Video {
     @Column(name = "status", nullable = false)
     private VideoStatus status = VideoStatus.UPLOADING;
 
+    @LastModifiedDate
     @Column(name = "updated_at")
     private Instant updatedAt;
 
+    @CreatedDate
     @Column(name = "published_at")
     private Instant publishedAt;
 
@@ -61,5 +66,9 @@ public class Video {
 
     public enum VideoStatus {
         UPLOADING, TRANSCODING, PUBLISHED, DELETED
+    }
+
+    public void calcuDuration(String videoUrl){
+        this.duration = 327;
     }
 }

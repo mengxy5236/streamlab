@@ -1,5 +1,7 @@
 package com.franklintju.streamlab.users;
 
+import com.franklintju.streamlab.users.mapper.UserMapper;
+import com.franklintju.streamlab.videos.VideoDto;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -14,9 +16,10 @@ import java.util.Map;
 @Service
 public class UserService {
     private final UserRepository userRepository;
-    private final UserMapper userMapper;
+    private final UserConverter userConverter;
     private final PasswordEncoder passwordEncoder;
     private final ProfileRepository profileRepository;
+    private final UserMapper userMapper;
 
     @Transactional
     public UserDto registerUser(RegisterUserRequest request) {
@@ -25,7 +28,7 @@ public class UserService {
             throw new DuplicateUserException();
         }
 
-        var user = userMapper.toEntity(request);
+        var user = userConverter.toEntity(request);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
 
@@ -34,12 +37,12 @@ public class UserService {
         profile.setUsername("用户" + user.getEmail());
         profileRepository.save(profile);
 
-        return userMapper.toDto(user);
+        return userConverter.toDto(user);
     }
 
     public UserDto getUser(Long id) {
         var user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
-        return userMapper.toDto(user);
+        return userConverter.toDto(user);
     }
 
     public Iterable<UserDto> getAllUsers(String sort) {
@@ -50,7 +53,7 @@ public class UserService {
 
         return userRepository.findAll(Sort.by(sort))
                 .stream()
-                .map(userMapper::toDto)
+                .map(userConverter::toDto)
                 .toList();
     }
 
@@ -73,4 +76,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    public List<VideoDto> getVideos(Long id) {
+        return userMapper.getVideosByUserId(id);
+    }
 }

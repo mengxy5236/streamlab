@@ -2,16 +2,12 @@ package com.franklintju.streamlab.videos;
 
 import lombok.Data;
 
-import java.time.Instant;
-
 @Data
-public class VideoDto {
-    private Long id;
+public class updateVideoRequest {
+
     private String title;
     private String description;
     private String coverUrl;
     private String videoUrl;
-    private Integer duration;
-    private Instant updatedAt;
-    private Instant publishedAt;
+
 }
