@@ -3,7 +3,10 @@ package com.franklintju.streamlab.danmaku;
 import com.franklintju.streamlab.users.User;
 import com.franklintju.streamlab.videos.Video;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -11,6 +14,9 @@ import java.time.Instant;
 
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "danmaku")
 public class Danmaku {

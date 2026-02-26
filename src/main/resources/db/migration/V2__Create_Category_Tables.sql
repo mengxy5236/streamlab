@@ -10,12 +10,3 @@ CREATE TABLE categories (
     INDEX idx_sort_order (sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE video_categories (
-    video_id BIGINT NOT NULL,
-    category_id BIGINT NOT NULL,
-    PRIMARY KEY (video_id, category_id),
-    CONSTRAINT fk_vc_video FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE,
-    CONSTRAINT fk_vc_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
-    INDEX idx_category_id (category_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-

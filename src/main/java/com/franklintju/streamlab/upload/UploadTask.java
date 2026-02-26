@@ -18,16 +18,11 @@ public class UploadTask {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "video_id")
-    private Video video;
+    @Column(name = "video_id")
+    private Long videoId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @Column(name = "original_filename", nullable = false)
-    private String originalFilename;
+    @Column(name = "user_id")
+    private Long userId;
 
     @Column(name = "file_path")
     private String filePath;
@@ -37,7 +32,7 @@ public class UploadTask {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private TaskStatus status = TaskStatus.PENDING;
+    private TaskStatus status = TaskStatus.CREATED;
 
     @Column(name = "progress")
     private Integer progress = 0;
@@ -66,7 +61,10 @@ public class UploadTask {
     }
 
     public enum TaskStatus {
-        PENDING, UPLOADING, TRANSCODING, COMPLETED, FAILED
+        CREATED,        // 任务已创建
+        PROCESSING,     // 后台处理中
+        SUCCESS,        // 处理完成
+        FAILED
     }
 }
 

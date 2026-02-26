@@ -1,5 +1,6 @@
 package com.franklintju.streamlab.users;
 
+import com.franklintju.streamlab.auth.AuthService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,12 +11,12 @@ public class ProfileService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
     private final ProfileMapper profileMapper;
+    private final AuthService authService;
 
     @Transactional
     public void update(Long id, updateProfileRequest request) {
 
-        var user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
-        Profile profile = (Profile) profileRepository.findByUser(user);
+        Profile profile = profileRepository.findByUserId(id).orElseThrow(UserNotFoundException::new);
 
         if (request.getUsername() != null) {
             profile.setUsername(request.getUsername());
@@ -40,12 +41,31 @@ public class ProfileService {
         profileRepository.save(profile);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public ProfileDto getProfile(Long id) {
 
-        var user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
-        Profile profile = (Profile) profileRepository.findByUser(user);
+        User currentUser = authService.getCurrentUser();
 
-        return profileMapper.toDto(profile);
+        boolean isSelf = currentUser != null && currentUser.getId().equals(id);
+        boolean isAuthenticated = currentUser != null;
+
+
+        if (isSelf) {
+            Profile profile = profileRepository.findByUserId(id)
+                    .orElseThrow(UserNotFoundException::new);
+            return profileMapper.toFullDto(profile);
+        }
+
+        else if (isAuthenticated) {
+            Profile profile = profileRepository.findByUserId(id)
+                    .orElseThrow(UserNotFoundException::new);
+            return profileMapper.toPublicDto(profile);
+        }
+
+        else {
+            Profile profile = profileRepository.findByUserId(id)
+                    .orElseThrow(UserNotFoundException::new);
+            return profileMapper.toGuestDto(profile);
+        }
     }
 }

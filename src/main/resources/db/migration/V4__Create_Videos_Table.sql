@@ -1,0 +1,36 @@
+CREATE TABLE videos (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL COMMENT '作者ID',
+    title VARCHAR(200) NOT NULL COMMENT '视频标题',
+    description TEXT NULL COMMENT '视频简介',
+    cover_url VARCHAR(500) NULL COMMENT '封面URL',
+    video_url VARCHAR(500) NULL COMMENT '视频URL',
+    duration INT NULL COMMENT '视频时长(秒)',
+    file_size BIGINT NULL COMMENT '文件大小(字节)',
+    status ENUM('DRAFT', 'READY', 'PUBLIC', 'DELETED') NOT NULL DEFAULT 'DRAFT' COMMENT '视频状态',
+    category_id BIGINT NULL COMMENT '分类ID',
+    views_count INT NOT NULL DEFAULT 0 COMMENT '播放量',
+    likes_count INT NOT NULL DEFAULT 0 COMMENT '点赞数',
+    comments_count INT NOT NULL DEFAULT 0 COMMENT '评论数',
+    created_at TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP NOT NULL COMMENT '更新时间',
+    published_at TIMESTAMP NULL COMMENT '发布时间',
+    
+    CONSTRAINT fk_video_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_video_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_category_id (category_id),
+    INDEX idx_status (status),
+    INDEX idx_views_count (views_count),
+    INDEX idx_published_at (published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE video_categories (
+                                  video_id BIGINT NOT NULL,
+                                  category_id BIGINT NOT NULL,
+                                  PRIMARY KEY (video_id, category_id),
+                                  CONSTRAINT fk_vc_video FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE,
+                                  CONSTRAINT fk_vc_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE,
+                                  INDEX idx_category_id (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

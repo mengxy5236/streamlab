@@ -4,5 +4,7 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface ProfileMapper {
-    ProfileDto toDto(Profile profile);
+    ToFullDto toFullDto(Profile profile);
+    ToPublicDto toPublicDto(Profile profile);
+    ToGuestDto toGuestDto(Profile profile);
 }

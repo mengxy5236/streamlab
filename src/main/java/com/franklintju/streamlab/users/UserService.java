@@ -1,5 +1,6 @@
 package com.franklintju.streamlab.users;
 
+import com.franklintju.streamlab.auth.AuthService;
 import com.franklintju.streamlab.users.mapper.UserMapper;
 import com.franklintju.streamlab.videos.VideoDto;
 import jakarta.transaction.Transactional;
@@ -20,6 +21,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final ProfileRepository profileRepository;
     private final UserMapper userMapper;
+    private final AuthService authService;
 
     @Transactional
     public UserDto registerUser(RegisterUserRequest request) {
@@ -59,6 +61,10 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Long id) {
+        var currentUser = authService.getCurrentUser();
+        if (!id.equals(currentUser.getId())) {
+            throw new AccessDeniedException("无权删除此用户");
+        }
         var user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
         userRepository.delete(user);
     }
@@ -77,6 +83,11 @@ public class UserService {
     }
 
     public List<VideoDto> getVideos(Long id) {
+
+        if (!userRepository.existsById(id)) {
+            throw new UserNotFoundException();
+        }
+
         return userMapper.getVideosByUserId(id);
     }
 }

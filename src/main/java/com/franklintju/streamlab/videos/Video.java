@@ -1,5 +1,6 @@
 package com.franklintju.streamlab.videos;
 
+import com.franklintju.streamlab.category.Category;
 import com.franklintju.streamlab.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -23,6 +24,10 @@ public class Video {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     @Column(name = "title", nullable = false, length = 200)
     private String title;
 
@@ -42,33 +47,83 @@ public class Video {
     @Column(name = "file_size")
     private Long fileSize;
 
+    @Column(name = "views_count", nullable = false)
+    private int viewsCount = 0;
+
+    @Column(name = "likes_count", nullable = false)
+    private int likesCount = 0;
+
+    @Column(name = "comments_count", nullable = false)
+    private int commentsCount = 0;
+
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private VideoStatus status = VideoStatus.UPLOADING;
+    private VideoStatus status = VideoStatus.DRAFT;
 
-    @LastModifiedDate
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
+
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @CreatedDate
     @Column(name = "published_at")
     private Instant publishedAt;
 
     @PrePersist
-    protected void onCreate() {
-        updatedAt = Instant.now();
+    public void onCreate() {
+        createdAt = Instant.now();
+        updatedAt = createdAt;
     }
 
     @PreUpdate
-    protected void onUpdate() {
+    public void onUpdate() {
         updatedAt = Instant.now();
     }
 
     public enum VideoStatus {
-        UPLOADING, TRANSCODING, PUBLISHED, DELETED
+        DRAFT, READY, PUBLIC, DELETED
     }
 
-    public void calcuDuration(String videoUrl){
-        this.duration = 327;
+    public void markReady(String videoUrl, String coverUrl, Integer duration, Long fileSize) {
+        if (status != VideoStatus.DRAFT) {
+            throw new IllegalStateException("只有 DRAFT 状态才能标记为 READY:(");
+        }
+        this.videoUrl = videoUrl;
+        this.coverUrl = coverUrl;
+        this.duration = duration;
+        this.fileSize = fileSize;
+        this.status = VideoStatus.READY;
     }
+
+    public void publish() {
+        if (status != VideoStatus.READY) {
+            throw new IllegalStateException("视频未准备好，不能发布:(");
+        }
+        this.status = VideoStatus.PUBLIC;
+        this.publishedAt = Instant.now();
+    }
+
+    public void delete() {
+        this.status = VideoStatus.DELETED;
+    }
+
+    public void view() {
+        this.viewsCount++;
+    }
+
+    public void like() {
+        this.likesCount++;
+    }
+
+    public void addComment() {
+        this.commentsCount++;
+    }
+
+    public void removeComment() {
+        if (this.commentsCount > 0) {
+            this.commentsCount--;
+        }
+    }
+
 }
