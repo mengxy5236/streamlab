@@ -1,4 +1,4 @@
-package com.franklintju.streamlab.follow;
+package com.franklintju.streamlab.exceptions;
 
 public class NotFollowedException extends RuntimeException {
 }

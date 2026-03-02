@@ -1,4 +1,4 @@
-package com.franklintju.streamlab.users;
+package com.franklintju.streamlab.exceptions;
 
 public class DuplicateUserException extends RuntimeException {
 }

@@ -1,6 +1,7 @@
 package com.franklintju.streamlab.videos;
 
 import com.franklintju.streamlab.auth.AuthService;
+import com.franklintju.streamlab.exceptions.VideoNotFoundException;
 import com.franklintju.streamlab.upload.UploadTask;
 import com.franklintju.streamlab.upload.UploadTaskRepository;
 import lombok.RequiredArgsConstructor;
@@ -54,7 +55,20 @@ public class VideoService {
     }
 
     public List<VideoDto> getVideosByUser(Long userId) {
-        return videoRepository.findByUserId(userId)
+        Long currentUserId = authService.getCurrentUser() != null 
+                ? authService.getCurrentUser().getId() 
+                : null;
+        
+        boolean isOwner = currentUserId != null && currentUserId.equals(userId);
+        
+        if (isOwner) {
+            return videoRepository.findByUserId(userId)
+                    .stream()
+                    .map(videoConverter::toDto)
+                    .toList();
+        }
+        
+        return videoRepository.findByUserIdAndStatus(userId, Video.VideoStatus.PUBLIC)
                 .stream()
                 .map(videoConverter::toDto)
                 .toList();
@@ -62,6 +76,16 @@ public class VideoService {
 
     public VideoDto getVideo(Long id) {
         var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
+        
+        if (video.getStatus() != Video.VideoStatus.PUBLIC) {
+            Long currentUserId = authService.getCurrentUser() != null 
+                    ? authService.getCurrentUser().getId() 
+                    : null;
+            if (currentUserId == null || !video.getUser().getId().equals(currentUserId)) {
+                throw new VideoNotFoundException();
+            }
+        }
+        
         return videoConverter.toDto(video);
     }
 
@@ -96,7 +120,18 @@ public class VideoService {
 
     public Page<VideoDto> listVideos(int page, int size) {
         var pageable = PageRequest.of(page, size);
-        return videoRepository.findAll(pageable)
+        return videoRepository.findByStatus(Video.VideoStatus.PUBLIC, pageable)
                 .map(videoConverter::toDto);
+    }
+
+    @Transactional
+    public VideoDto publishVideo(Long id) {
+        var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
+        Long currentUserId = authService.getCurrentUser().getId();
+        if (!video.getUser().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("无权发布此视频");
+        }
+        video.publish();
+        return videoConverter.toDto(video);
     }
 }

@@ -24,6 +24,15 @@ public class UploadController {
         return ResponseEntity.ok(result);
     }
 
+    @PostMapping("/{videoId}/cover")
+    public ResponseEntity<Map<String, Object>> uploadCover(
+            @PathVariable Long videoId,
+            @RequestParam("file") MultipartFile file
+    ) {
+        var result = uploadService.uploadCover(videoId, file);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/tasks/{taskId}")
     public ResponseEntity<UploadTaskDto> getTaskStatus(@PathVariable Long taskId) {
         var task = uploadService.getTask(taskId);

@@ -1,7 +1,9 @@
 package com.franklintju.streamlab.follow;
 
+import com.franklintju.streamlab.exceptions.AlreadyFollowedException;
+import com.franklintju.streamlab.exceptions.NotFollowedException;
 import com.franklintju.streamlab.follow.mapper.FollowMapper;
-import com.franklintju.streamlab.users.UserNotFoundException;
+import com.franklintju.streamlab.exceptions.UserNotFoundException;
 import com.franklintju.streamlab.users.UserRepository;
 import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;

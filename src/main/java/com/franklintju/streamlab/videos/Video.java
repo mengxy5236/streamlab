@@ -5,9 +5,6 @@ import com.franklintju.streamlab.users.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-
 import java.time.Instant;
 
 @Getter
@@ -52,6 +49,9 @@ public class Video {
 
     @Column(name = "likes_count", nullable = false)
     private int likesCount = 0;
+
+    @Version
+    private Long version;
 
     @Column(name = "comments_count", nullable = false)
     private int commentsCount = 0;
@@ -114,6 +114,16 @@ public class Video {
 
     public void like() {
         this.likesCount++;
+    }
+
+    public void unlike() {
+        if (this.likesCount > 0) {
+            this.likesCount--;
+        }
+    }
+
+    public boolean isLikeable() {
+        return status == VideoStatus.PUBLIC;
     }
 
     public void addComment() {

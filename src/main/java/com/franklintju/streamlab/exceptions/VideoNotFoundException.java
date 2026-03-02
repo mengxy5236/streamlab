@@ -1,4 +1,4 @@
-package com.franklintju.streamlab.videos;
+package com.franklintju.streamlab.exceptions;
 
 public class VideoNotFoundException extends RuntimeException {
     public VideoNotFoundException() {

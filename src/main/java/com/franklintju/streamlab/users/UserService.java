@@ -1,6 +1,8 @@
 package com.franklintju.streamlab.users;
 
 import com.franklintju.streamlab.auth.AuthService;
+import com.franklintju.streamlab.exceptions.DuplicateUserException;
+import com.franklintju.streamlab.exceptions.UserNotFoundException;
 import com.franklintju.streamlab.users.mapper.UserMapper;
 import com.franklintju.streamlab.videos.VideoDto;
 import jakarta.transaction.Transactional;

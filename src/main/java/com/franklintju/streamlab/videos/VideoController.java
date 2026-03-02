@@ -61,4 +61,9 @@ public class VideoController {
     ) {
         return ResponseEntity.ok(videoService.listVideos(page, size));
     }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<VideoDto> publishVideo(@PathVariable Long id) {
+        return ResponseEntity.ok(videoService.publishVideo(id));
+    }
 }
