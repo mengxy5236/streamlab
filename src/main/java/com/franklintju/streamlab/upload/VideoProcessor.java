@@ -8,9 +8,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 
 @Slf4j
@@ -20,6 +17,7 @@ public class VideoProcessor {
 
     private final UploadTaskRepository uploadTaskRepository;
     private final VideoRepository videoRepository;
+    private final HlsService hlsService;
 
     @Async("videoTaskExecutor")
     @Transactional
@@ -30,54 +28,59 @@ public class VideoProcessor {
             return;
         }
 
+        String ossUrl = task.getFilePath();
+        
         try {
             task.setStatus(UploadTask.TaskStatus.PROCESSING);
-            task.setProgress(10);
+            task.setProgress(5);
             uploadTaskRepository.save(task);
 
-            Path videoPath = Paths.get(task.getFilePath());
-            if (Files.exists(videoPath)) {
-                long fileSize = Files.size(videoPath);
-                task.setFileSize(fileSize);
-                task.setProgress(30);
-                uploadTaskRepository.save(task);
-
-                // TODO: 调用 FFmpeg 提取视频时长
-                // Duration duration = extractDuration(videoPath);
-                // task.setProgress(80);
-
-                // 模拟处理
-                simulateProcessing(task);
-
-                var video = videoRepository.findById(task.getVideoId()).orElse(null);
-                if (video != null) {
-                    video.setVideoUrl(task.getFilePath());
-                    video.setStatus(Video.VideoStatus.READY);
-                    videoRepository.save(video);
+            HlsService.HlsResult hlsResult = null;
+            
+            if (hlsService.isHlsSupported()) {
+                try {
+                    log.info("开始 HLS 转码: videoId={}, ossUrl={}", task.getVideoId(), ossUrl);
+                    
+                    task.setProgress(10);
+                    uploadTaskRepository.save(task);
+                    
+                    hlsResult = hlsService.convertToHls(ossUrl, task.getVideoId());
+                    
+                    log.info("HLS 转码完成: hlsUrl={}, duration={}s", hlsResult.hlsUrl(), hlsResult.duration());
+                } catch (Exception e) {
+                    log.error("HLS 转码失败: {}", e.getMessage());
                 }
-
-                task.setStatus(UploadTask.TaskStatus.SUCCESS);
-                task.setProgress(100);
-                task.setCompletedAt(Instant.now());
             } else {
-                task.setStatus(UploadTask.TaskStatus.FAILED);
-                task.setErrorMessage("文件不存在: " + task.getFilePath());
+                log.warn("FFmpeg 不可用，跳过 HLS 转码");
             }
 
+            var video = videoRepository.findById(task.getVideoId()).orElse(null);
+            if (video != null) {
+                video.setVideoUrl(ossUrl);
+                
+                if (hlsResult != null) {
+                    video.setHlsUrl(hlsResult.hlsUrl());
+                    video.setHlsReady(true);
+                    video.setResolution(hlsResult.resolution());
+                    video.setBitrate(hlsResult.bitrate());
+                    video.setDuration(hlsResult.duration());
+                    log.info("视频 {} 时长设置为: {} 秒", video.getId(), hlsResult.duration());
+                }
+                
+                video.setStatus(Video.VideoStatus.READY);
+                videoRepository.save(video);
+            }
+
+            task.setStatus(UploadTask.TaskStatus.SUCCESS);
+            task.setProgress(100);
+            task.setCompletedAt(Instant.now());
+
         } catch (Exception e) {
-            log.error("Video processing failed: {}", uploadTaskId, e);
+            log.error("Video processing failed: uploadTaskId={}", uploadTaskId, e);
             task.setStatus(UploadTask.TaskStatus.FAILED);
             task.setErrorMessage(e.getMessage());
         }
 
         uploadTaskRepository.save(task);
-    }
-
-    private void simulateProcessing(UploadTask task) throws InterruptedException {
-        for (int i = 30; i <= 90; i += 10) {
-            Thread.sleep(500);
-            task.setProgress(i);
-            uploadTaskRepository.save(task);
-        }
     }
 }

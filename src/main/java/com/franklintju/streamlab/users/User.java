@@ -30,6 +30,10 @@ public class User {
     private String password;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "role")
+    private UserRole role = UserRole.USER;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private UserStatus status = UserStatus.ACTIVE;
 
@@ -41,7 +45,11 @@ public class User {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    private enum UserStatus {
+    public enum UserRole {
+        USER, ADMIN
+    }
+
+    public enum UserStatus {
         ACTIVE, BANNED, DELETED
     }
 }

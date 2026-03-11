@@ -1,0 +1,2 @@
+-- V13__Add_Role_To_Users.sql
+ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'USER';

@@ -39,6 +39,14 @@ public class OssService {
         return upload(key, new FileInputStream(file), file.length(), contentType);
     }
 
+    public String uploadFile(File file, String key) throws IOException {
+        String contentType = Files.probeContentType(file.toPath());
+        if (contentType == null) {
+            contentType = "application/octet-stream";
+        }
+        return upload(key, new FileInputStream(file), file.length(), contentType);
+    }
+
     private String getFileExtension(String filename) {
         int idx = filename.lastIndexOf('.');
         return idx > 0 ? filename.substring(idx) : "";
@@ -60,6 +68,23 @@ public class OssService {
         String key = extractKey(url);
         ossClient.deleteObject(ossConfig.getBucketName(), key);
         log.info("OSS删除成功: {}", key);
+    }
+
+    public void downloadToFile(String url, File destination) throws IOException {
+        String key = extractKey(url);
+        var ossObject = ossClient.getObject(ossConfig.getBucketName(), key);
+        
+        try (InputStream input = ossObject.getObjectContent();
+             java.io.FileOutputStream output = new java.io.FileOutputStream(destination)) {
+            input.transferTo(output);
+        }
+        
+        log.info("OSS下载成功: {} -> {}", url, destination.getPath());
+    }
+
+    public InputStream download(String url) {
+        String key = extractKey(url);
+        return ossClient.getObject(ossConfig.getBucketName(), key).getObjectContent();
     }
 
     private String extractKey(String url) {

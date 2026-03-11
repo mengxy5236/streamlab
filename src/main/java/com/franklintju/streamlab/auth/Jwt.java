@@ -16,11 +16,16 @@ public class Jwt {
     }
 
     public boolean isExpired() {
-        return claims.getExpiration().before(new Date());
+        Date exp = claims.getExpiration();
+        return exp == null || exp.before(new Date());
     }
 
     public Long getUserId() {
         return Long.valueOf(claims.getSubject());
+    }
+
+    public String getRole() {
+        return claims.get("role", String.class);
     }
 
     public String toString() {

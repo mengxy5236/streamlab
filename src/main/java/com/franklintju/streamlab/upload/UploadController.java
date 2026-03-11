@@ -1,13 +1,13 @@
 package com.franklintju.streamlab.upload;
 
+import com.franklintju.streamlab.common.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Map;
-
+@Tag(name = "上传", description = "文件上传管理")
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/upload")
@@ -15,36 +15,31 @@ public class UploadController {
 
     private final UploadService uploadService;
 
+    @Operation(summary = "上传视频", description = "上传视频文件")
     @PostMapping("/{videoId}")
-    public ResponseEntity<Map<String, Object>> uploadVideo(
+    public ApiResponse<?> uploadVideo(
             @PathVariable Long videoId,
-            @RequestParam("file") MultipartFile file
-    ) {
+            @RequestParam("file") MultipartFile file) {
         var result = uploadService.uploadVideo(videoId, file);
-        return ResponseEntity.ok(result);
+        return ApiResponse.success(result);
     }
 
+    @Operation(summary = "上传封面", description = "上传视频封面图")
     @PostMapping("/{videoId}/cover")
-    public ResponseEntity<Map<String, Object>> uploadCover(
+    public ApiResponse<?> uploadCover(
             @PathVariable Long videoId,
-            @RequestParam("file") MultipartFile file
-    ) {
+            @RequestParam("file") MultipartFile file) {
         var result = uploadService.uploadCover(videoId, file);
-        return ResponseEntity.ok(result);
+        return ApiResponse.success(result);
     }
 
+    @Operation(summary = "查询任务", description = "查询上传任务状态")
     @GetMapping("/tasks/{taskId}")
-    public ResponseEntity<UploadTaskDto> getTaskStatus(@PathVariable Long taskId) {
+    public ApiResponse<UploadTaskDto> getTaskStatus(@PathVariable Long taskId) {
         var task = uploadService.getTask(taskId);
         if (task == null) {
-            return ResponseEntity.notFound().build();
+            return ApiResponse.error(404, "任务不存在");
         }
-        return ResponseEntity.ok(task);
-    }
-
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleException(Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", e.getMessage()));
+        return ApiResponse.success(task);
     }
 }

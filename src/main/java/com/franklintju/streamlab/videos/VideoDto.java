@@ -11,6 +11,10 @@ public class VideoDto {
     private String description;
     private String coverUrl;
     private String videoUrl;
+    private String hlsUrl;
+    private boolean hlsReady;
+    private String resolution;
+    private Integer bitrate;
     private Integer duration;
     private Instant updatedAt;
     private Instant publishedAt;

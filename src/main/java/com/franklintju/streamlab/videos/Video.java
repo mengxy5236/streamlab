@@ -37,6 +37,18 @@ public class Video {
     @Column(name = "video_url", length = 500)
     private String videoUrl;
 
+    @Column(name = "hls_url", length = 500)
+    private String hlsUrl;
+
+    @Column(name = "is_hls_ready", nullable = false)
+    private boolean hlsReady = false;
+
+    @Column(name = "resolution", length = 50)
+    private String resolution;
+
+    @Column(name = "bitrate")
+    private Integer bitrate;
+
     // max length : 8h (28800)
     @Column(name = "duration")
     private Integer duration;

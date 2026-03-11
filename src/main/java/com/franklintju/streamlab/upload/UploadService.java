@@ -17,12 +17,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UploadService {
+
+    private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of(
+            "video/mp4", "video/avi", "video/quicktime", "video/x-matroska", "video/webm"
+    );
+    private static final Set<String> ALLOWED_VIDEO_EXTENSIONS = Set.of(
+            ".mp4", ".avi", ".mov", ".mkv", ".webm"
+    );
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
+            "image/jpeg", "image/png", "image/gif", "image/webp"
+    );
+    private static final Set<String> ALLOWED_IMAGE_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp"
+    );
 
     private final UploadTaskRepository uploadTaskRepository;
     private final VideoRepository videoRepository;
@@ -41,6 +55,14 @@ public class UploadService {
 
         if (file.isEmpty()) {
             throw new IllegalArgumentException("文件不能为空");
+        }
+
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase() : "";
+
+        if (contentType == null || !ALLOWED_VIDEO_TYPES.contains(contentType) || !ALLOWED_VIDEO_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("不支持的视频格式，仅支持 MP4/AVI/MOV/MKV/WEBM");
         }
 
         try {
@@ -76,6 +98,17 @@ public class UploadService {
 
         if (!video.getUser().getId().equals(user.getId())) {
             throw new SecurityException("无权上传此封面");
+        }
+
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("文件不能为空");
+        }
+        String contentType = file.getContentType();
+        String originalFilename = file.getOriginalFilename();
+        String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase() : "";
+
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType) || !ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
+            throw new IllegalArgumentException("不支持的图片格式，仅支持 JPG/PNG/GIF/WEBP");
         }
 
         try {

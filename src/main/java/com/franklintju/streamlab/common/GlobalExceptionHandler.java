@@ -1,45 +1,84 @@
 package com.franklintju.streamlab.common;
 
 import com.franklintju.streamlab.exceptions.BusinessException;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@ControllerAdvice
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // 业务异常
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<Map<String, String>> handleBusinessException(BusinessException e) {
-        return ResponseEntity.status(e.getStatus())
-                .body(Map.of("error", e.getMessage()));
+    public ApiResponse<Void> handleBusinessException(BusinessException e) {
+        return ApiResponse.error(e.getStatus().value(), e.getMessage());
     }
 
-    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<Map<String, String>> handleOptimisticLock() {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of("error", "数据已被其他用户修改，请重试"));
+    // 资源不存在
+    @ExceptionHandler({NoHandlerFoundException.class, org.springframework.data.mapping.PropertyReferenceException.class})
+    public ApiResponse<Void> handleNotFound(Exception e) {
+        return ApiResponse.error(404, "资源不存在");
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<Map<String, String>> handleUnreadableMessage() {
-        return ResponseEntity.badRequest().body(Map.of("error", "Invalid request body"));
+    // 参数类型错误
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ApiResponse<Void> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        return ApiResponse.error(400, "参数类型错误: " + e.getName());
     }
 
+    // 参数校验失败
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException exception) {
-        var errors = new HashMap<String, String>();
+    public ApiResponse<Map<String, String>> handleValidationErrors(MethodArgumentNotValidException e) {
+        Map<String, String> errors = new HashMap<>();
+        e.getBindingResult().getFieldErrors().forEach(error ->
+                errors.put(error.getField(), error.getDefaultMessage())
+        );
+        return ApiResponse.error(400, "参数校验失败");
+    }
 
-        exception.getBindingResult().getFieldErrors().forEach(error -> {
-            errors.put(error.getField(), error.getDefaultMessage());
-        });
+    // 请求体解析失败
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ApiResponse<Void> handleUnreadableMessage() {
+        return ApiResponse.error(400, "请求体格式错误");
+    }
 
-        return ResponseEntity.badRequest().body(errors);
+    // 乐观锁冲突
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ApiResponse<Void> handleOptimisticLock() {
+        return ApiResponse.error(409, "数据已被其他用户修改，请重试");
+    }
+
+    // 数据约束冲突
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ApiResponse<Void> handleDataIntegrity(DataIntegrityViolationException e) {
+        return ApiResponse.error(409, "数据已存在或被关联，无法操作");
+    }
+
+    // 权限不足
+    @ExceptionHandler(AccessDeniedException.class)
+    public ApiResponse<Void> handleAccessDenied(AccessDeniedException e) {
+        return ApiResponse.error(403, "权限不足");
+    }
+
+    // 未登录
+    @ExceptionHandler(AuthenticationException.class)
+    public ApiResponse<Void> handleAuthenticationException(AuthenticationException e) {
+        return ApiResponse.error(401, "请先登录");
+    }
+
+    // 其他未知异常
+    @ExceptionHandler(Exception.class)
+    public ApiResponse<Void> handleException(Exception e) {
+        return ApiResponse.error(500, "服务器内部错误");
     }
 }

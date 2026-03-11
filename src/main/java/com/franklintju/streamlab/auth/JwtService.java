@@ -23,12 +23,23 @@ public class JwtService {
     }
 
     private Jwt generateToken(User user, long tokenExpiration) {
-        var claims = Jwts.claims()
+        var now = new Date();
+        var expiration = new Date(now.getTime() + 1000 * tokenExpiration);
+
+        var jwt = Jwts.builder()
                 .subject(user.getId().toString())
-                .add("email", user.getEmail())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 1000 * tokenExpiration))
-                .build();
+                .issuedAt(now)
+                .expiration(expiration)
+                .claim("email", user.getEmail())
+                .claim("role", user.getRole().name())
+                .signWith(jwtConfig.getSecretKey())
+                .compact();
+
+        var claims = Jwts.parser()
+                .verifyWith(jwtConfig.getSecretKey())
+                .build()
+                .parseSignedClaims(jwt)
+                .getPayload();
 
         return new Jwt(claims, jwtConfig.getSecretKey());
     }
