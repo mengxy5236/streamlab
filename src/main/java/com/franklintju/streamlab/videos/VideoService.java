@@ -22,6 +22,7 @@ public class VideoService {
     private final VideoConverter videoConverter;
     private final UploadTaskRepository uploadTaskRepository;
     private final AuthService authService;
+    private final VideoStatsRedisService videoStatsRedisService;
 
 
     @Transactional
@@ -114,8 +115,10 @@ public class VideoService {
 
     @Transactional
     public void incrementViewCount(Long id) {
-        var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
-        video.view();
+        if (!videoRepository.existsById(id)) {
+            throw new VideoNotFoundException();
+        }
+        videoStatsRedisService.incrementViews(id, 1);
     }
 
     public Page<VideoDto> listVideos(int page, int size) {

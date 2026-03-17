@@ -1,9 +1,10 @@
 package com.franklintju.streamlab.common;
 
 import com.franklintju.streamlab.exceptions.BusinessException;
+import com.franklintju.streamlab.exceptions.RateLimitExceededException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -15,6 +16,7 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -22,6 +24,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ApiResponse<Void> handleBusinessException(BusinessException e) {
         return ApiResponse.error(e.getStatus().value(), e.getMessage());
+    }
+
+    // 限流异常
+    @ExceptionHandler(RateLimitExceededException.class)
+    public ApiResponse<Void> handleRateLimitExceeded(RateLimitExceededException e) {
+        return ApiResponse.error(429, e.getMessage());
     }
 
     // 资源不存在
@@ -52,12 +60,6 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(400, "请求体格式错误");
     }
 
-    // 乐观锁冲突
-    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-    public ApiResponse<Void> handleOptimisticLock() {
-        return ApiResponse.error(409, "数据已被其他用户修改，请重试");
-    }
-
     // 数据约束冲突
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ApiResponse<Void> handleDataIntegrity(DataIntegrityViolationException e) {
@@ -79,6 +81,7 @@ public class GlobalExceptionHandler {
     // 其他未知异常
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception e) {
+        log.error("Unhandled exception", e);
         return ApiResponse.error(500, "服务器内部错误");
     }
 }

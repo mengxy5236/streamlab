@@ -1,6 +1,7 @@
 package com.franklintju.streamlab.comment;
 
 import com.franklintju.streamlab.config.RedisConfig;
+import com.franklintju.streamlab.exceptions.CommentNotFoundException;
 import com.franklintju.streamlab.users.User;
 import com.franklintju.streamlab.users.UserRepository;
 import com.franklintju.streamlab.videos.Video;
@@ -20,6 +21,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
+    private final CommentStatsRedisService commentStatsRedisService;
 
     @Transactional
     public Comment createComment(Long userId, Long videoId, String content, Long parentId, Long rootId) {
@@ -97,13 +99,19 @@ public class CommentService {
     @Transactional
     @CacheEvict(value = RedisConfig.CACHE_COMMENT_COUNT, key = "#commentId")
     public void likeComment(Long commentId) {
-        commentRepository.updateLikesCount(commentId, 1);
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        commentStatsRedisService.incrementLikes(commentId, 1);
     }
 
     @Transactional
     @CacheEvict(value = RedisConfig.CACHE_COMMENT_COUNT, key = "#commentId")
     public void unlikeComment(Long commentId) {
-        commentRepository.updateLikesCount(commentId, -1);
+        if (!commentRepository.existsById(commentId)) {
+            throw new CommentNotFoundException();
+        }
+        commentStatsRedisService.incrementLikes(commentId, -1);
     }
 
     // 手动清除缓存（用于复杂场景）

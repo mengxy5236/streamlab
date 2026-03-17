@@ -51,7 +51,7 @@ public class UserController {
     @PostMapping("/{id}/change-password")
     public ApiResponse<Void> changePassword(
             @PathVariable Long id,
-            @Valid @RequestBody changePasswordRequest request) {
+            @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(id, request);
         return ApiResponse.success(null);
     }

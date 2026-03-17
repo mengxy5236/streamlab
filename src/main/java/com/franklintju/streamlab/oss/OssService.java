@@ -1,7 +1,8 @@
-package com.franklintju.streamlab.config;
+package com.franklintju.streamlab.oss;
 
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.model.ObjectMetadata;
+import com.franklintju.streamlab.config.OssConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

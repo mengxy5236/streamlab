@@ -1,9 +1,8 @@
 package com.franklintju.streamlab.upload;
 
 import com.franklintju.streamlab.auth.AuthService;
-import com.franklintju.streamlab.config.OssService;
+import com.franklintju.streamlab.oss.OssService;
 import com.franklintju.streamlab.exceptions.VideoNotFoundException;
-import com.franklintju.streamlab.videos.Video;
 import com.franklintju.streamlab.videos.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,14 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -43,6 +38,7 @@ public class UploadService {
     private final VideoProcessor videoProcessor;
     private final OssService ossService;
     private final AuthService authService;
+    private final TranscodeProducer transcodeProducer;
 
     @Transactional
     public Map<String, Object> uploadVideo(Long videoId, MultipartFile file) {
@@ -76,7 +72,14 @@ public class UploadService {
             task.setProgress(0);
             uploadTaskRepository.save(task);
 
-            videoProcessor.processVideo(task.getId());
+            // 发送 Kafka 消息触发异步转码
+            TranscodeMessage transcodeMessage = new TranscodeMessage(
+                    task.getId(),
+                    videoId,
+                    ossUrl,
+                    user.getId()
+            );
+            transcodeProducer.sendTranscodeMessage(transcodeMessage);
 
             Map<String, Object> result = new HashMap<>();
             result.put("taskId", task.getId());

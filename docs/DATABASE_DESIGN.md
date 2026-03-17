@@ -306,9 +306,7 @@ com.franklintju.streamlab
 │   ├── VideoCategoryId.java
 │   ├── CategoryRepository.java
 │   └── VideoCategoryRepository.java
-├── stats/              # 视频统计
-│   ├── VideoStats.java
-│   └── VideoStatsRepository.java
+├── stats/              # 视频统计（已废弃，现使用 Video 表 + Redis）
 ├── interaction/        # 互动行为
 │   ├── VideoLike.java
 │   ├── VideoLikeId.java

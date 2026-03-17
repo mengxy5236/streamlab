@@ -1,7 +1,5 @@
 package com.franklintju.streamlab.upload;
 
-import com.franklintju.streamlab.users.User;
-import com.franklintju.streamlab.videos.Video;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;

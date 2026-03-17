@@ -1,6 +1,6 @@
 package com.franklintju.streamlab.upload;
 
-import com.franklintju.streamlab.config.OssService;
+import com.franklintju.streamlab.oss.OssService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +29,12 @@ public class HlsService {
 
     @Value("${upload.hls.output-dir:${java.io.tmpdir}/hls}")
     private String outputDir;
+
+    @Value("${ffmpeg.path:ffmpeg}")
+    private String ffmpegPath;
+
+    @Value("${ffmpeg.ffprobe:ffprobe}")
+    private String ffprobePath;
 
     public record HlsResult(String hlsUrl, String resolution, int bitrate, int duration) {}
 
@@ -111,7 +117,7 @@ public class HlsService {
     private int extractDurationByPath(String source) {
         try {
             List<String> command = List.of(
-                "ffprobe",
+                ffprobePath,
                 "-v", "error",
                 "-show_entries", "format=duration",
                 "-of", "default=noprint_wrappers=1:nokey=1",
@@ -148,23 +154,39 @@ public class HlsService {
 
     private List<String> buildFfmpegCommand(String input, String output) {
         List<String> cmd = new ArrayList<>();
-        cmd.add("ffmpeg");
+        cmd.add(ffmpegPath);
         cmd.add("-i");
         cmd.add(input);
+        
+        // 视频编码参数
         cmd.add("-c:v");
         cmd.add("libx264");
         cmd.add("-preset");
         cmd.add("medium");
+        
+        // 强制关键帧：每5秒一个关键帧（假设30fps，5*30=150帧）
+        cmd.add("-g");
+        cmd.add("150");
+        cmd.add("-keyint_min");
+        cmd.add("150");
+        cmd.add("-sc_threshold");
+        cmd.add("0");
+        
+        // 音频编码参数
         cmd.add("-c:a");
         cmd.add("aac");
         cmd.add("-b:a");
         cmd.add("128k");
+        
+        // 视频码率参数
         cmd.add("-b:v");
         cmd.add("2000k");
         cmd.add("-maxrate");
         cmd.add("2500k");
         cmd.add("-bufsize");
         cmd.add("4000k");
+        
+        // HLS 特有参数
         cmd.add("-hls_time");
         cmd.add(String.valueOf(segmentDuration));
         cmd.add("-hls_playlist_type");
@@ -227,7 +249,7 @@ public class HlsService {
 
     public boolean isHlsSupported() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("ffmpeg", "-version");
+            ProcessBuilder pb = new ProcessBuilder(ffmpegPath, "-version");
             Process p = pb.start();
             return p.waitFor(3, TimeUnit.SECONDS) && p.exitValue() == 0;
         } catch (Exception e) {

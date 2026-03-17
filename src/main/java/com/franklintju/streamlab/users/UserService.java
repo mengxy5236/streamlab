@@ -72,7 +72,7 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(Long id, changePasswordRequest request) {
+    public void changePassword(Long id, ChangePasswordRequest request) {
 
         var user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
 

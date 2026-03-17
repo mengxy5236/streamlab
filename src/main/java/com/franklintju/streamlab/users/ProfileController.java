@@ -17,7 +17,7 @@ public class ProfileController {
     @PostMapping("/{id}")
     public ApiResponse<Void> updateProfile(
             @PathVariable Long id,
-            @RequestBody updateProfileRequest request) {
+            @RequestBody UpdateProfileRequest request) {
         profileService.update(id, request);
         return ApiResponse.success(null);
     }

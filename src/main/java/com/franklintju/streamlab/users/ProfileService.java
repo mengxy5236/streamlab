@@ -15,7 +15,7 @@ public class ProfileService {
     private final AuthService authService;
 
     @Transactional
-    public void update(Long id, updateProfileRequest request) {
+    public void update(Long id, UpdateProfileRequest request) {
 
         Profile profile = profileRepository.findByUserId(id).orElseThrow(UserNotFoundException::new);
 
