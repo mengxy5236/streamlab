@@ -19,20 +19,22 @@ public class TranscodeConsumer {
     private final VideoRepository videoRepository;
     private final HlsService hlsService;
     private final TranscodeProgressService transcodeProgressService;
+    private final TranscodeProducer transcodeProducer;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = KafkaConfig.VIDEO_TRANSCODE_TOPIC, groupId = "streamlab-group")
+    @KafkaListener(topics = KafkaConfig.VIDEO_TRANSCODE_TOPIC, groupId = "streamlab-group",
+                   containerFactory = "kafkaListenerContainerFactory")
     @Transactional
     public void handleTranscodeMessage(String message) {
         try {
             TranscodeMessage transcodeMessage = objectMapper.readValue(message, TranscodeMessage.class);
-            log.info("收到转码消息: uploadTaskId={}, videoId={}", 
-                    transcodeMessage.getUploadTaskId(), transcodeMessage.getVideoId());
+            log.info("收到转码消息: uploadTaskId={}, videoId={}, retryCount={}",
+                    transcodeMessage.getUploadTaskId(), transcodeMessage.getVideoId(), transcodeMessage.getRetryCount());
 
             processVideo(transcodeMessage);
 
         } catch (Exception e) {
-            log.error("转码消息处理失败: {}", message, e);
+            log.error("转码消息解析失败: {}", message, e);
         }
     }
 
@@ -47,12 +49,10 @@ public class TranscodeConsumer {
         Long videoId = transcodeMessage.getVideoId();
 
         try {
-            // 状态：处理中
             task.setStatus(UploadTask.TaskStatus.PROCESSING);
             task.setProgress(5);
             uploadTaskRepository.save(task);
-            
-            // 发送进度：开始处理
+
             transcodeProgressService.sendProgress(videoId, 5, "PROCESSING", "开始处理视频");
 
             HlsService.HlsResult hlsResult = null;
@@ -63,18 +63,16 @@ public class TranscodeConsumer {
 
                     task.setProgress(10);
                     uploadTaskRepository.save(task);
-                    
-                    // 发送进度：开始转码
                     transcodeProgressService.sendProgress(videoId, 10, "PROCESSING", "开始 HLS 转码");
 
                     hlsResult = hlsService.convertToHls(ossUrl, videoId);
 
-                    log.info("HLS 转码完成: hlsUrl={}, duration={}s", 
+                    log.info("HLS 转码完成: hlsUrl={}, duration={}s",
                             hlsResult.hlsUrl(), hlsResult.duration());
                 } catch (Exception e) {
                     log.error("HLS 转码失败: {}", e.getMessage());
-                    // 发送进度：转码失败
                     transcodeProgressService.sendProgress(videoId, task.getProgress(), "FAILED", "HLS 转码失败: " + e.getMessage());
+                    throw e;
                 }
             } else {
                 log.warn("FFmpeg 不可用，跳过 HLS 转码");
@@ -98,11 +96,8 @@ public class TranscodeConsumer {
                 videoRepository.save(video);
             }
 
-            // 状态：成功
             task.setStatus(UploadTask.TaskStatus.SUCCESS);
             task.setProgress(100);
-            
-            // 发送进度：完成
             transcodeProgressService.sendProgress(
                     TranscodeProgressMessage.builder()
                             .taskId(task.getId())
@@ -117,11 +112,19 @@ public class TranscodeConsumer {
 
         } catch (Exception e) {
             log.error("Video processing failed: uploadTaskId={}", transcodeMessage.getUploadTaskId(), e);
-            task.setStatus(UploadTask.TaskStatus.FAILED);
-            task.setErrorMessage(e.getMessage());
-            
-            // 发送进度：失败
-            transcodeProgressService.sendProgress(videoId, task.getProgress(), "FAILED", "处理失败: " + e.getMessage());
+
+            if (transcodeMessage.canRetry()) {
+                TranscodeMessage retryMessage = transcodeMessage.withIncrementedRetry();
+                log.info("准备重试转码: uploadTaskId={}, attempt={}/{}",
+                        retryMessage.getUploadTaskId(), retryMessage.getRetryCount(), TranscodeMessage.MAX_RETRY);
+                transcodeProducer.sendTranscodeMessageWithDelay(retryMessage);
+            } else {
+                log.error("转码重试次数耗尽，标记为失败: uploadTaskId={}", transcodeMessage.getUploadTaskId());
+                task.setStatus(UploadTask.TaskStatus.FAILED);
+                task.setErrorMessage("转码失败，已重试 " + TranscodeMessage.MAX_RETRY + " 次: " + e.getMessage());
+                transcodeProgressService.sendProgress(videoId, task.getProgress(), "FAILED",
+                        "转码失败，已重试 " + TranscodeMessage.MAX_RETRY + " 次");
+            }
         }
 
         uploadTaskRepository.save(task);

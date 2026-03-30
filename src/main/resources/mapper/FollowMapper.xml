@@ -29,27 +29,4 @@
         where uf.following_id = #{userId}
     </select>
 
-    <update id="incrementFollowing">
-        UPDATE profiles
-        SET following_count = following_count + 1
-        WHERE user_id = #{userId}
-    </update>
-
-    <update id="incrementFollowers">
-        UPDATE profiles
-        SET followers_count = followers_count + 1
-        WHERE user_id = #{userId}
-    </update>
-
-    <update id="decrementFollowing">
-        UPDATE profiles
-        SET following_count = following_count - 1
-        WHERE user_id = #{userId}
-    </update>
-
-    <update id="decrementFollowers">
-        UPDATE profiles
-        SET followers_count = followers_count - 1
-        WHERE user_id = #{userId}
-    </update>
 </mapper>

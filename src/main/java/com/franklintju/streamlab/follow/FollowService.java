@@ -1,12 +1,14 @@
 package com.franklintju.streamlab.follow;
 
-import com.franklintju.streamlab.common.RedisLockService;
+import com.franklintju.streamlab.common.DistributedLock;
 import com.franklintju.streamlab.exceptions.AlreadyFollowedException;
 import com.franklintju.streamlab.exceptions.NotFollowedException;
-import com.franklintju.streamlab.follow.mapper.FollowMapper;
 import com.franklintju.streamlab.exceptions.UserNotFoundException;
+import com.franklintju.streamlab.follow.mapper.FollowMapper;
+import com.franklintju.streamlab.users.ProfileRepository;
+import com.franklintju.streamlab.users.User;
 import com.franklintju.streamlab.users.UserRepository;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -15,111 +17,75 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 @Slf4j
-@AllArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class FollowService {
 
     private final UserRepository userRepository;
     private final UserFollowRepository userFollowRepository;
+    private final ProfileRepository profileRepository;
     private final FollowMapper followMapper;
-    private final RedisLockService redisLockService;
 
-    private static final String FOLLOW_LOCK_KEY = "user:follow";
-    private static final int LOCK_EXPIRE_SECONDS = 10;
-
+    @DistributedLock(key = "user:follow:#request.followingId", expireSeconds = 10, message = "系统繁忙，请稍后重试")
     @Transactional
-    public void follow(FollowRequest request){
-
-        if(request.getFollowerId().equals(request.getFollowingId())) {
-            throw new IllegalStateException("非法 follow 调用！");
+    public void follow(FollowRequest request) {
+        if (request.getFollowerId().equals(request.getFollowingId())) {
+            throw new IllegalStateException("不能关注自己");
         }
 
-        String lockKey = FOLLOW_LOCK_KEY + ":" + request.getFollowingId();
-        String lockValue = redisLockService.acquireLock(lockKey, LOCK_EXPIRE_SECONDS);
+        User follower = userRepository.findById(request.getFollowerId())
+                .orElseThrow(UserNotFoundException::new);
+        User following = userRepository.findById(request.getFollowingId())
+                .orElseThrow(UserNotFoundException::new);
 
-        if (lockValue == null) {
-            throw new RuntimeException("系统繁忙，请稍后重试");
+        UserFollowId followId = new UserFollowId(follower.getId(), following.getId());
+
+        if (userFollowRepository.existsById(followId)) {
+            throw new AlreadyFollowedException();
         }
 
         try {
-            var follower = userRepository
-                    .findById(request.getFollowerId())
-                    .orElseThrow(UserNotFoundException::new);
-
-
-            var following = userRepository
-                    .findById(request.getFollowingId())
-                    .orElseThrow(UserNotFoundException::new);
-
-
-            UserFollowId followId = new UserFollowId(follower.getId(), following.getId());
-
-            boolean exists = userFollowRepository.existsById(followId);
-            if (exists) {
-                throw new AlreadyFollowedException();
-            }
-
             UserFollow userFollow = new UserFollow();
             userFollow.setFollower(follower);
             userFollow.setFollowing(following);
             userFollow.setId(followId);
+            userFollowRepository.save(userFollow);
 
-            try {
-                userFollowRepository.save(userFollow);
-                userFollowRepository.flush();
+            profileRepository.incrementFollowingCount(follower.getId(), 1);
+            profileRepository.incrementFollowersCount(following.getId(), 1);
 
-                followMapper.incrementFollowing(follower.getId(), following.getId());
-                followMapper.incrementFollowers(following.getId(), follower.getId());
-                log.info("User {} followed user {}", follower.getId(), following.getId());
-
-            } catch (DataIntegrityViolationException e) {
-
-                throw new AlreadyFollowedException();
-            }
-        } finally {
-            redisLockService.releaseLock(lockKey, lockValue);
+            log.info("User {} followed user {}", follower.getId(), following.getId());
+        } catch (DataIntegrityViolationException e) {
+            throw new AlreadyFollowedException();
         }
     }
 
+    @DistributedLock(key = "user:follow:#request.followingId", expireSeconds = 10, message = "系统繁忙，请稍后重试")
     @Transactional
     public void unfollow(FollowRequest request) {
-
-        if(request.getFollowerId().equals(request.getFollowingId())) {
-            throw new IllegalStateException("非法 follow 调用！");
+        if (request.getFollowerId().equals(request.getFollowingId())) {
+            throw new IllegalStateException("不能取消关注自己");
         }
 
-        String lockKey = FOLLOW_LOCK_KEY + ":" + request.getFollowingId();
-        String lockValue = redisLockService.acquireLock(lockKey, LOCK_EXPIRE_SECONDS);
+        UserFollowId followId = new UserFollowId(request.getFollowerId(), request.getFollowingId());
+        UserFollow userFollow = userFollowRepository.findById(followId)
+                .orElseThrow(NotFollowedException::new);
 
-        if (lockValue == null) {
-            throw new RuntimeException("系统繁忙，请稍后重试");
-        }
+        userFollowRepository.delete(userFollow);
 
-        try {
-            var userFollow = userFollowRepository
-                    .findById(new UserFollowId(request.getFollowerId(), request.getFollowingId()))
-                    .orElseThrow(NotFollowedException::new);
+        profileRepository.incrementFollowingCount(request.getFollowerId(), -1);
+        profileRepository.incrementFollowersCount(request.getFollowingId(), -1);
 
-            userFollowRepository.delete(userFollow);
-            userFollowRepository.flush();
-
-            followMapper.decrementFollowing(request.getFollowerId(), request.getFollowingId());
-            followMapper.decrementFollowers(request.getFollowingId(), request.getFollowerId());
-            log.info("User {} unfollowed user {}", request.getFollowerId(), request.getFollowingId());
-        } finally {
-            redisLockService.releaseLock(lockKey, lockValue);
-        }
+        log.info("User {} unfollowed user {}", request.getFollowerId(), request.getFollowingId());
     }
 
+    @Transactional(readOnly = true)
     public List<UserSummary> getFollowingList(Long id) {
-
         return followMapper.findFollowingByUserId(id);
     }
 
+    @Transactional(readOnly = true)
     public List<UserSummary> getFollowerList(Long id) {
-
         return followMapper.findFollowersByUserId(id);
     }
-
-
 }

@@ -23,6 +23,7 @@ public class VideoService {
     private final UploadTaskRepository uploadTaskRepository;
     private final AuthService authService;
     private final VideoStatsRedisService videoStatsRedisService;
+    private final ViewEventProducer viewEventProducer;
 
 
     @Transactional
@@ -119,6 +120,7 @@ public class VideoService {
             throw new VideoNotFoundException();
         }
         videoStatsRedisService.incrementViews(id, 1);
+        viewEventProducer.sendViewEvent(new ViewEventMessage(id, null, 1L, java.time.Instant.now()));
     }
 
     public Page<VideoDto> listVideos(int page, int size) {

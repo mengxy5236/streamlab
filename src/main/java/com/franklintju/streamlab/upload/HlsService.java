@@ -36,6 +36,12 @@ public class HlsService {
     @Value("${ffmpeg.ffprobe:ffprobe}")
     private String ffprobePath;
 
+    @Value("${ffmpeg.timeout-minutes:30}")
+    private int ffmpegTimeoutMinutes;
+
+    @Value("${ffmpeg.ffprobe-timeout-seconds:10}")
+    private int ffprobeTimeoutSeconds;
+
     public record HlsResult(String hlsUrl, String resolution, int bitrate, int duration) {}
 
     public HlsResult convertToHls(String ossUrl, Long videoId) {
@@ -74,7 +80,7 @@ public class HlsService {
                 }
             }
             
-            boolean finished = process.waitFor(30, TimeUnit.MINUTES);
+            boolean finished = process.waitFor(ffmpegTimeoutMinutes, TimeUnit.MINUTES);
             if (!finished) {
                 process.destroyForcibly();
                 throw new RuntimeException("FFmpeg 转码超时");
@@ -136,7 +142,7 @@ public class HlsService {
                 }
             }
             
-            boolean finished = process.waitFor(10, TimeUnit.SECONDS);
+            boolean finished = process.waitFor(ffprobeTimeoutSeconds, TimeUnit.SECONDS);
             if (finished && process.exitValue() == 0) {
                 String durationStr = output.toString().trim();
                 double durationSec = Double.parseDouble(durationStr);

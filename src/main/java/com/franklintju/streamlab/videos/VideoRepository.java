@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface VideoRepository extends JpaRepository<Video, Long> {
     List<Video> findByUserId(Long id);
@@ -15,6 +16,9 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     List<Video> findByUserIdAndStatus(Long userId, Video.VideoStatus status);
 
     Page<Video> findByStatus(Video.VideoStatus status, Pageable pageable);
+
+    @Query("SELECT v FROM Video v JOIN FETCH v.user WHERE v.id = :videoId")
+    Optional<Video> findByIdWithUser(@Param("videoId") Long videoId);
 
     @Modifying
     @Query("UPDATE Video v SET v.viewsCount = v.viewsCount + :delta WHERE v.id = :videoId")

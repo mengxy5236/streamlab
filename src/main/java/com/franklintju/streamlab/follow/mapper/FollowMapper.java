@@ -10,12 +10,4 @@ public interface FollowMapper {
     List<UserSummary> findFollowingByUserId(@Param("userId") Long userId);
 
     List<UserSummary> findFollowersByUserId(@Param("userId") Long userId);
-
-    void incrementFollowing(@Param("userId") Long userId, @Param("followingId") Long followingId);
-
-    void incrementFollowers(@Param("userId") Long userId, @Param("followerId") Long followerId);
-
-    void decrementFollowing(@Param("userId") Long userId, @Param("followingId") Long followingId);
-
-    void decrementFollowers(@Param("userId") Long userId, @Param("followerId") Long followerId);
 }

@@ -30,25 +30,8 @@ public class StatsSyncScheduler {
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void syncVideoStatsToDatabase() {
-        Set<String> viewKeys = videoStatsRedisService.getAllVideoViewKeys();
         Set<String> likeKeys = videoStatsRedisService.getAllVideoLikeKeys();
         Set<String> danmakuKeys = videoStatsRedisService.getAllVideoDanmakuKeys();
-
-        for (String key : viewKeys) {
-            Long videoId = extractVideoId(key);
-            if (videoId == null) continue;
-
-            Long views = videoStatsRedisService.getViews(videoId);
-            if (views > 0) {
-                try {
-                    videoRepository.incrementViews(videoId, views.intValue());
-                    videoStatsRedisService.clearStats(videoId);
-                    log.info("同步播放量到数据库: videoId={}, views={}", videoId, views);
-                } catch (Exception e) {
-                    log.error("同步播放量失败: videoId={}", videoId, e);
-                }
-            }
-        }
 
         for (String key : likeKeys) {
             Long videoId = extractVideoId(key);

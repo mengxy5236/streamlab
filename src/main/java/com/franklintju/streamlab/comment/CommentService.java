@@ -1,7 +1,6 @@
 package com.franklintju.streamlab.comment;
 
 import com.franklintju.streamlab.config.RedisConfig;
-import com.franklintju.streamlab.exceptions.CommentNotFoundException;
 import com.franklintju.streamlab.users.User;
 import com.franklintju.streamlab.users.UserRepository;
 import com.franklintju.streamlab.videos.Video;
@@ -21,7 +20,6 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
-    private final CommentStatsRedisService commentStatsRedisService;
 
     @Transactional
     public Comment createComment(Long userId, Long videoId, String content, Long parentId, Long rootId) {
@@ -57,9 +55,7 @@ public class CommentService {
         Comment comment = commentRepository.findById(commentId).orElseThrow();
         comment.setContent(content);
         Comment saved = commentRepository.save(comment);
-
         evictVideoCommentsCache(comment.getVideo().getId());
-
         return saved;
     }
 
@@ -67,56 +63,46 @@ public class CommentService {
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId).orElseThrow();
         Long videoId = comment.getVideo().getId();
-
         if (comment.getParent() != null) {
             commentRepository.updateReplyCount(comment.getParent().getId(), -1);
         }
         commentRepository.delete(comment);
-
         evictVideoCommentsCache(videoId);
     }
 
-    @Cacheable(value = RedisConfig.CACHE_VIDEO_COMMENTS, key = "#videoId + '_' + #pageable.pageNumber")
+    @Cacheable(value = RedisConfig.CACHE_VIDEO_COMMENTS,
+               key = "#videoId + '_' + #pageable.pageNumber")
+    @Transactional(readOnly = true)
     public Page<Comment> getVideoComments(Long videoId, Pageable pageable) {
         return commentRepository.findByVideoIdAndRootIsNullAndStatus(videoId, Comment.CommentStatus.VISIBLE, pageable);
     }
 
-    @Cacheable(value = RedisConfig.CACHE_COMMENT_REPLIES, key = "#rootId + '_' + #pageable.pageNumber")
+    @Cacheable(value = RedisConfig.CACHE_COMMENT_REPLIES,
+               key = "#rootId + '_' + #pageable.pageNumber")
+    @Transactional(readOnly = true)
     public Page<Comment> getReplies(Long rootId, Pageable pageable) {
         return commentRepository.findByRootIdAndStatus(rootId, Comment.CommentStatus.VISIBLE, pageable);
     }
 
-    @Cacheable(value = RedisConfig.CACHE_USER_COMMENTS, key = "#userId + '_' + #pageable.pageNumber")
+    @Cacheable(value = RedisConfig.CACHE_USER_COMMENTS,
+               key = "#userId + '_' + #pageable.pageNumber")
+    @Transactional(readOnly = true)
     public Page<Comment> getUserComments(Long userId, Pageable pageable) {
         return commentRepository.findByUserId(userId, pageable);
     }
 
-    @Cacheable(value = RedisConfig.CACHE_COMMENT_COUNT, key = "#videoId")
+    @Cacheable(value = RedisConfig.CACHE_COMMENT_COUNT,
+               key = "'video:' + #videoId")
+    @Transactional(readOnly = true)
     public long getCommentCount(Long videoId) {
         return commentRepository.countByVideoIdAndStatus(videoId, Comment.CommentStatus.VISIBLE);
     }
 
-    @Transactional
-    @CacheEvict(value = RedisConfig.CACHE_COMMENT_COUNT, key = "#commentId")
-    public void likeComment(Long commentId) {
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        commentStatsRedisService.incrementLikes(commentId, 1);
-    }
-
-    @Transactional
-    @CacheEvict(value = RedisConfig.CACHE_COMMENT_COUNT, key = "#commentId")
-    public void unlikeComment(Long commentId) {
-        if (!commentRepository.existsById(commentId)) {
-            throw new CommentNotFoundException();
-        }
-        commentStatsRedisService.incrementLikes(commentId, -1);
-    }
-
-    // 手动清除缓存（用于复杂场景）
-    @CacheEvict(value = {RedisConfig.CACHE_VIDEO_COMMENTS, RedisConfig.CACHE_COMMENT_COUNT}, key = "#videoId")
+    @CacheEvict(value = {RedisConfig.CACHE_VIDEO_COMMENTS,
+                         RedisConfig.CACHE_COMMENT_REPLIES,
+                         RedisConfig.CACHE_USER_COMMENTS,
+                         RedisConfig.CACHE_COMMENT_COUNT},
+               allEntries = true)
     public void evictVideoCommentsCache(Long videoId) {
-        // 缓存自动清除
     }
 }
