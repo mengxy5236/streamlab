@@ -1,21 +1,37 @@
-# StreamLab
+# StreamLab Workspace
 
-StreamLab is a Spring Boot based video platform prototype inspired by Bilibili.
+This repository is now organized as a small full-stack workspace.
 
-## Features
+## Layout
 
-- User authentication and profile management
-- Video metadata CRUD
-- Video upload with OSS storage
-- HLS transcoding with FFmpeg
-- Asynchronous transcoding with Kafka
-- Comments, likes, follows, danmaku, and watch history
-- Redis based hot data and scheduled stats sync
+```text
+streamlab/
+├── backend/   # Spring Boot backend
+├── frontend/  # frontend app placeholder
+├── .git/
+└── README.md
+```
 
-## Architecture
+## Why `.git` stays at the root
 
-- Spring Boot monolith
-- MySQL + Flyway
-- Redis cache and counters
-- Kafka used only for video transcoding
-- OSS and FFmpeg integration for media processing
+Keeping `.git` at the workspace root is the right choice if you want:
+
+- one repository for both frontend and backend
+- shared commit history
+- a single issue / branch / PR flow
+- easier full-stack collaboration
+
+`backend/` should contain Spring Boot specific files such as `pom.xml`, `.mvn`, `src`, `docs`, and `.env`.
+
+## Projects
+
+- Backend: [backend/README.md](backend/README.md)
+- Frontend: `frontend/` is currently empty and ready for scaffolding
+
+## Suggested next step
+
+Create the frontend as a separate app inside `frontend/`, for example with:
+
+```text
+React + Vite + TypeScript
+```
