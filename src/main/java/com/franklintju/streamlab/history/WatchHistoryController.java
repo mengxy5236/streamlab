@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Tag(name = "历史记录", description = "观看历史管理")
+@Tag(name = "观看历史", description = "观看历史与播放进度管理")
 @RestController
 @RequestMapping("/api/history")
 @RequiredArgsConstructor
@@ -43,7 +43,7 @@ public class WatchHistoryController {
         return ApiResponse.success(response);
     }
 
-    @Operation(summary = "删除记录", description = "删除指定视频的观看记录")
+    @Operation(summary = "删除记录", description = "删除指定视频的观看历史")
     @DeleteMapping("/video/{videoId}")
     public ApiResponse<Void> deleteHistory(@PathVariable Long videoId) {
         Long userId = getCurrentUserId();
@@ -51,7 +51,7 @@ public class WatchHistoryController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "清空历史", description = "清空当前用户的所有观看历史")
+    @Operation(summary = "清空历史", description = "清空当前用户的全部观看历史")
     @DeleteMapping
     public ApiResponse<Void> clearHistory() {
         Long userId = getCurrentUserId();
@@ -59,7 +59,7 @@ public class WatchHistoryController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "获取进度", description = "获取视频播放进度（Redis优先）")
+    @Operation(summary = "获取进度", description = "获取当前用户的视频播放进度")
     @GetMapping("/video/{videoId}/progress")
     public ApiResponse<VideoProgress> getProgress(@PathVariable Long videoId) {
         Long userId = getCurrentUserId();

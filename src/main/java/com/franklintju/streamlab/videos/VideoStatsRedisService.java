@@ -63,6 +63,18 @@ public class VideoStatsRedisService {
         redisTemplate.delete(VIDEO_DANMAKU_KEY + videoId);
     }
 
+    public void clearViewStats(Long videoId) {
+        redisTemplate.delete(VIDEO_VIEWS_KEY + videoId);
+    }
+
+    public void clearLikeStats(Long videoId) {
+        redisTemplate.delete(VIDEO_LIKES_KEY + videoId);
+    }
+
+    public void clearDanmakuStats(Long videoId) {
+        redisTemplate.delete(VIDEO_DANMAKU_KEY + videoId);
+    }
+
     public Set<String> getAllVideoViewKeys() {
         return redisTemplate.keys(VIDEO_VIEWS_KEY + "*");
     }

@@ -1,7 +1,7 @@
 package com.franklintju.streamlab.upload;
 
-import com.franklintju.streamlab.config.KafkaConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.franklintju.streamlab.config.KafkaConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;

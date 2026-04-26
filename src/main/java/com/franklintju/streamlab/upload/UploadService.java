@@ -6,6 +6,7 @@ import com.franklintju.streamlab.exceptions.VideoNotFoundException;
 import com.franklintju.streamlab.videos.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -129,9 +130,17 @@ public class UploadService {
     }
 
     public UploadTaskDto getTask(Long taskId) {
+        var user = authService.getCurrentUser();
+        if (user == null) {
+            throw new AccessDeniedException("请先登录");
+        }
+
         var task = uploadTaskRepository.findById(taskId).orElse(null);
         if (task == null) {
             return null;
+        }
+        if (!user.getId().equals(task.getUserId())) {
+            throw new AccessDeniedException("无权查看该上传任务");
         }
         return UploadTaskDto.fromEntity(task);
     }

@@ -30,34 +30,66 @@ public class StatsSyncScheduler {
     @Scheduled(fixedRate = 60000)
     @Transactional
     public void syncVideoStatsToDatabase() {
-        Set<String> likeKeys = videoStatsRedisService.getAllVideoLikeKeys();
-        Set<String> danmakuKeys = videoStatsRedisService.getAllVideoDanmakuKeys();
+        syncViews();
+        syncLikes();
+        syncDanmaku();
+    }
 
+    private void syncViews() {
+        Set<String> viewKeys = videoStatsRedisService.getAllVideoViewKeys();
+        for (String key : viewKeys) {
+            Long videoId = extractVideoId(key);
+            if (videoId == null) {
+                continue;
+            }
+
+            Long views = videoStatsRedisService.getViews(videoId);
+            if (views != 0) {
+                try {
+                    videoRepository.incrementViews(videoId, views.intValue());
+                    videoStatsRedisService.clearViewStats(videoId);
+                    log.info("同步播放量到数据库: videoId={}, views={}", videoId, views);
+                } catch (Exception e) {
+                    log.error("同步播放量失败: videoId={}", videoId, e);
+                }
+            }
+        }
+    }
+
+    private void syncLikes() {
+        Set<String> likeKeys = videoStatsRedisService.getAllVideoLikeKeys();
         for (String key : likeKeys) {
             Long videoId = extractVideoId(key);
-            if (videoId == null) continue;
+            if (videoId == null) {
+                continue;
+            }
 
             Long likes = videoStatsRedisService.getLikes(videoId);
             if (likes != 0) {
                 try {
                     videoRepository.incrementLikes(videoId, likes.intValue());
-                    videoStatsRedisService.clearStats(videoId);
+                    videoStatsRedisService.clearLikeStats(videoId);
                     log.info("同步点赞数到数据库: videoId={}, likes={}", videoId, likes);
                 } catch (Exception e) {
                     log.error("同步点赞数失败: videoId={}", videoId, e);
                 }
             }
         }
+    }
 
+    private void syncDanmaku() {
+        Set<String> danmakuKeys = videoStatsRedisService.getAllVideoDanmakuKeys();
         for (String key : danmakuKeys) {
             Long videoId = extractVideoId(key);
-            if (videoId == null) continue;
+            if (videoId == null) {
+                continue;
+            }
 
             Long danmaku = videoStatsRedisService.getDanmaku(videoId);
             if (danmaku != 0) {
                 try {
                     videoRepository.incrementDanmaku(videoId, danmaku.intValue());
-                    videoStatsRedisService.clearStats(videoId);
+                    videoStatsRedisService.clearDanmakuStats(videoId);
                     log.info("同步弹幕数到数据库: videoId={}, danmaku={}", videoId, danmaku);
                 } catch (Exception e) {
                     log.error("同步弹幕数失败: videoId={}", videoId, e);

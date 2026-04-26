@@ -73,6 +73,10 @@ public class UserService {
 
     @Transactional
     public void changePassword(Long id, ChangePasswordRequest request) {
+        var currentUser = authService.getCurrentUser();
+        if (currentUser == null || !id.equals(currentUser.getId())) {
+            throw new AccessDeniedException("无权修改该用户密码");
+        }
 
         var user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
 

@@ -11,7 +11,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.List;
 
-@Tag(name = "用户", description = "用户管理")
+@Tag(name = "用户", description = "用户管理接口")
 @AllArgsConstructor
 @RestController
 @RequestMapping("/api/users")
@@ -27,13 +27,13 @@ public class UserController {
         return ApiResponse.success(userDto);
     }
 
-    @Operation(summary = "获取用户", description = "根据ID获取用户信息")
+    @Operation(summary = "获取用户", description = "根据 ID 获取用户信息")
     @GetMapping("/{id}")
     public ApiResponse<UserDto> getUser(@PathVariable Long id) {
         return ApiResponse.success(userService.getUser(id));
     }
 
-    @Operation(summary = "用户列表", description = "获取所有用户")
+    @Operation(summary = "用户列表", description = "获取全部用户")
     @GetMapping
     public ApiResponse<Iterable<UserDto>> getAllUsers(
             @RequestParam(required = false, defaultValue = "", name = "sort") String sort) {
@@ -47,7 +47,7 @@ public class UserController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "修改密码", description = "修改用户密码")
+    @Operation(summary = "修改密码", description = "修改当前用户密码")
     @PostMapping("/{id}/change-password")
     public ApiResponse<Void> changePassword(
             @PathVariable Long id,
@@ -56,7 +56,7 @@ public class UserController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "获取用户视频", description = "获取用户发布的所有视频")
+    @Operation(summary = "获取用户视频", description = "获取用户发布的视频列表")
     @GetMapping("/{id}/videos")
     public ApiResponse<List<VideoDto>> getVideos(@PathVariable Long id) {
         return ApiResponse.success(userService.getVideos(id));

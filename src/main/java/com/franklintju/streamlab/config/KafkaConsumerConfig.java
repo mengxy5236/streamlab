@@ -1,6 +1,5 @@
 package com.franklintju.streamlab.config;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -11,7 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.*;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
 import org.springframework.kafka.listener.CommonErrorHandler;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
 import org.springframework.kafka.listener.DefaultErrorHandler;
@@ -22,7 +25,6 @@ import java.util.Map;
 
 @Slf4j
 @Configuration
-@RequiredArgsConstructor
 public class KafkaConsumerConfig {
 
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")
@@ -66,57 +68,13 @@ public class KafkaConsumerConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String> likeEventConsumerFactory(
-            ConsumerFactory<String, String> consumerFactory,
-            CommonErrorHandler errorHandler) {
-        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory);
-        factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setGroupId("like-event-group");
-        return factory;
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String> commentLikeEventConsumerFactory(
-            ConsumerFactory<String, String> consumerFactory,
-            CommonErrorHandler errorHandler) {
-        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory);
-        factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setGroupId("comment-like-group");
-        return factory;
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, String> viewEventConsumerFactory(
-            ConsumerFactory<String, String> consumerFactory,
-            CommonErrorHandler errorHandler) {
-        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(consumerFactory);
-        factory.setCommonErrorHandler(errorHandler);
-        factory.getContainerProperties().setGroupId("view-event-group");
-        return factory;
-    }
-
-    @Bean
     public CommonErrorHandler errorHandler(KafkaTemplate<String, String> kafkaTemplate) {
         DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
                 (record, ex) -> {
-                    String dlqTopic = getDlqTopic(record.topic());
-                    log.error("消息处理失败，发送至 DLQ: topic={}, partition={}, offset={}, dlqTopic={}",
-                            record.topic(), record.partition(), record.offset(), dlqTopic);
-                    return new TopicPartition(dlqTopic, 0);
+                    log.error("消息处理失败，发送至 DLQ: topic={}, partition={}, offset={}",
+                            record.topic(), record.partition(), record.offset(), ex);
+                    return new TopicPartition(KafkaConfig.TRANSCODE_DLQ, 0);
                 });
         return new DefaultErrorHandler(recoverer, new FixedBackOff(1000L, 2L));
-    }
-
-    private String getDlqTopic(String originalTopic) {
-        return switch (originalTopic) {
-            case KafkaConfig.VIDEO_TRANSCODE_TOPIC -> KafkaConfig.TRANSCODE_DLQ;
-            case KafkaConfig.LIKE_EVENT_TOPIC -> KafkaConfig.LIKE_EVENT_DLQ;
-            case KafkaConfig.COMMENT_LIKE_EVENT_TOPIC -> KafkaConfig.COMMENT_LIKE_EVENT_DLQ;
-            case KafkaConfig.VIEW_EVENT_TOPIC -> KafkaConfig.VIEW_EVENT_DLQ;
-            default -> originalTopic + "-dlq";
-        };
     }
 }

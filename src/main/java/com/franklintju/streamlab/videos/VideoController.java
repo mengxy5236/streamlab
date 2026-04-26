@@ -10,14 +10,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "视频", description = "视频 CRUD、播放")
+@Tag(name = "视频", description = "视频 CRUD 与播放相关接口")
 @AllArgsConstructor
 @RestController
 @RequestMapping("/api/videos")
 public class VideoController {
     private final VideoService videoService;
 
-    @Operation(summary = "创建视频", description = "创建视频基本信息")
+    @Operation(summary = "创建视频", description = "创建视频基础信息")
     @PostMapping
     public ApiResponse<VideoDto> createVideo(@RequestBody CreateVideoRequest request) {
         return ApiResponse.success(videoService.createVideo(request));
@@ -36,26 +36,26 @@ public class VideoController {
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "获取视频", description = "根据ID获取视频详情")
+    @Operation(summary = "获取视频", description = "根据 ID 获取视频详情")
     @GetMapping("/{id}")
     public ApiResponse<VideoDto> getVideo(@PathVariable Long id) {
         return ApiResponse.success(videoService.getVideo(id));
     }
 
-    @Operation(summary = "获取用户视频", description = "获取指定用户的所有视频")
+    @Operation(summary = "获取用户视频", description = "获取指定用户的视频列表")
     @GetMapping
     public ApiResponse<List<VideoDto>> getVideosByUser(@RequestParam("userId") Long userId) {
         return ApiResponse.success(videoService.getVideosByUser(userId));
     }
 
-    @Operation(summary = "增加播放量", description = "增加视频播放次数")
+    @Operation(summary = "增加播放量", description = "为视频增加一次播放记录")
     @PostMapping("/{id}/view")
     public ApiResponse<Void> viewVideo(@PathVariable Long id) {
         videoService.incrementViewCount(id);
         return ApiResponse.success(null);
     }
 
-    @Operation(summary = "视频列表", description = "分页获取视频列表")
+    @Operation(summary = "视频列表", description = "分页获取公开视频列表")
     @GetMapping("/list")
     public ApiResponse<PageResponse<VideoDto>> listVideos(
             @RequestParam(defaultValue = "0") int page,
@@ -64,7 +64,7 @@ public class VideoController {
         return ApiResponse.success(PageResponse.of(videos));
     }
 
-    @Operation(summary = "发布视频", description = "发布视频使其可见")
+    @Operation(summary = "发布视频", description = "发布视频使其对外可见")
     @PostMapping("/{id}/publish")
     public ApiResponse<VideoDto> publishVideo(@PathVariable Long id) {
         return ApiResponse.success(videoService.publishVideo(id));

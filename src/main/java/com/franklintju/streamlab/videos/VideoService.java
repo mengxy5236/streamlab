@@ -23,8 +23,6 @@ public class VideoService {
     private final UploadTaskRepository uploadTaskRepository;
     private final AuthService authService;
     private final VideoStatsRedisService videoStatsRedisService;
-    private final ViewEventProducer viewEventProducer;
-
 
     @Transactional
     public VideoDto updateVideo(Long id, UpdateVideoRequest request) {
@@ -33,7 +31,7 @@ public class VideoService {
 
         Long currentUserId = authService.getCurrentUser().getId();
         if (!video.getUser().getId().equals(currentUserId)) {
-            throw new AccessDeniedException("无权修改此视频");
+            throw new AccessDeniedException("无权修改该视频");
         }
 
         boolean videoUrlChanged = !Objects.equals(video.getVideoUrl(), request.getVideoUrl());
@@ -57,19 +55,19 @@ public class VideoService {
     }
 
     public List<VideoDto> getVideosByUser(Long userId) {
-        Long currentUserId = authService.getCurrentUser() != null 
-                ? authService.getCurrentUser().getId() 
+        Long currentUserId = authService.getCurrentUser() != null
+                ? authService.getCurrentUser().getId()
                 : null;
-        
+
         boolean isOwner = currentUserId != null && currentUserId.equals(userId);
-        
+
         if (isOwner) {
             return videoRepository.findByUserId(userId)
                     .stream()
                     .map(videoConverter::toDto)
                     .toList();
         }
-        
+
         return videoRepository.findByUserIdAndStatus(userId, Video.VideoStatus.PUBLIC)
                 .stream()
                 .map(videoConverter::toDto)
@@ -78,16 +76,16 @@ public class VideoService {
 
     public VideoDto getVideo(Long id) {
         var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
-        
+
         if (video.getStatus() != Video.VideoStatus.PUBLIC) {
-            Long currentUserId = authService.getCurrentUser() != null 
-                    ? authService.getCurrentUser().getId() 
+            Long currentUserId = authService.getCurrentUser() != null
+                    ? authService.getCurrentUser().getId()
                     : null;
             if (currentUserId == null || !video.getUser().getId().equals(currentUserId)) {
                 throw new VideoNotFoundException();
             }
         }
-        
+
         return videoConverter.toDto(video);
     }
 
@@ -109,7 +107,7 @@ public class VideoService {
         var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
         Long currentUserId = authService.getCurrentUser().getId();
         if (!video.getUser().getId().equals(currentUserId)) {
-            throw new AccessDeniedException("无权删除此视频");
+            throw new AccessDeniedException("无权删除该视频");
         }
         videoRepository.delete(video);
     }
@@ -120,7 +118,6 @@ public class VideoService {
             throw new VideoNotFoundException();
         }
         videoStatsRedisService.incrementViews(id, 1);
-        viewEventProducer.sendViewEvent(new ViewEventMessage(id, null, 1L, java.time.Instant.now()));
     }
 
     public Page<VideoDto> listVideos(int page, int size) {
@@ -134,7 +131,7 @@ public class VideoService {
         var video = videoRepository.findById(id).orElseThrow(VideoNotFoundException::new);
         Long currentUserId = authService.getCurrentUser().getId();
         if (!video.getUser().getId().equals(currentUserId)) {
-            throw new AccessDeniedException("无权发布此视频");
+            throw new AccessDeniedException("无权发布该视频");
         }
         video.publish();
         return videoConverter.toDto(video);

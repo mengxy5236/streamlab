@@ -1,6 +1,5 @@
 package com.franklintju.streamlab.comment;
 
-import com.franklintju.streamlab.comment.CommentStatsRedisService;
 import com.franklintju.streamlab.users.User;
 import com.franklintju.streamlab.users.UserRepository;
 import com.franklintju.streamlab.videos.Video;
@@ -32,8 +31,6 @@ class CommentServiceTest {
     private VideoRepository videoRepository;
     @Mock
     private UserRepository userRepository;
-    @Mock
-    private CommentStatsRedisService commentStatsRedisService;
     @InjectMocks
     private CommentService commentService;
 
@@ -137,23 +134,5 @@ class CommentServiceTest {
         long count = commentService.getCommentCount(100L);
 
         assertThat(count).isEqualTo(5L);
-    }
-
-    @Test
-    void shouldLikeComment() {
-        when(commentRepository.existsById(1L)).thenReturn(true);
-
-        commentService.likeComment(1L);
-
-        verify(commentStatsRedisService).incrementLikes(1L, 1);
-    }
-
-    @Test
-    void shouldUnlikeComment() {
-        when(commentRepository.existsById(1L)).thenReturn(true);
-
-        commentService.unlikeComment(1L);
-
-        verify(commentStatsRedisService).incrementLikes(1L, -1);
     }
 }

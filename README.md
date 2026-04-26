@@ -1,20 +1,21 @@
 # StreamLab
 
-StreamLab is a distributed video platform prototype built with **Spring Boot**, inspired by Bilibili. It focuses on video upload, processing, streaming, and search in high-concurrency scenarios.
+StreamLab is a Spring Boot based video platform prototype inspired by Bilibili.
 
 ## Features
 
-- Video upload and storage
-- Video transcoding using FFmpeg
-- HLS video streaming support
-- Asynchronous task handling with Kafka
-- Video search using Elasticsearch
-- Caching with Redis for metadata retrieval
+- User authentication and profile management
+- Video metadata CRUD
+- Video upload with OSS storage
+- HLS transcoding with FFmpeg
+- Asynchronous transcoding with Kafka
+- Comments, likes, follows, danmaku, and watch history
+- Redis based hot data and scheduled stats sync
 
 ## Architecture
 
-- Spring Boot microservices
-- Kafka message queue for task decoupling
-- Redis caching layer
-- Elasticsearch indexing
-- OSS and FFmpeg integration for video processing
+- Spring Boot monolith
+- MySQL + Flyway
+- Redis cache and counters
+- Kafka used only for video transcoding
+- OSS and FFmpeg integration for media processing

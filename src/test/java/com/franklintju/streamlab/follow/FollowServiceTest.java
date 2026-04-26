@@ -3,7 +3,7 @@ package com.franklintju.streamlab.follow;
 import com.franklintju.streamlab.exceptions.AlreadyFollowedException;
 import com.franklintju.streamlab.exceptions.NotFollowedException;
 import com.franklintju.streamlab.follow.mapper.FollowMapper;
-import com.franklintju.streamlab.common.RedisLockService;
+import com.franklintju.streamlab.users.ProfileRepository;
 import com.franklintju.streamlab.users.User;
 import com.franklintju.streamlab.users.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,9 +30,9 @@ class FollowServiceTest {
     @Mock
     private UserFollowRepository userFollowRepository;
     @Mock
-    private FollowMapper followMapper;
+    private ProfileRepository profileRepository;
     @Mock
-    private RedisLockService redisLockService;
+    private FollowMapper followMapper;
     @InjectMocks
     private FollowService followService;
 
@@ -59,13 +59,12 @@ class FollowServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(follower));
         when(userRepository.findById(2L)).thenReturn(Optional.of(following));
         when(userFollowRepository.existsById(any(UserFollowId.class))).thenReturn(false);
-        when(redisLockService.acquireLock(any(String.class), any(Integer.class))).thenReturn("lock-value");
 
         followService.follow(request);
 
         verify(userFollowRepository).save(any(UserFollow.class));
-        verify(followMapper).incrementFollowing(1L, 2L);
-        verify(followMapper).incrementFollowers(2L, 1L);
+        verify(profileRepository).incrementFollowingCount(1L, 1);
+        verify(profileRepository).incrementFollowersCount(2L, 1);
     }
 
     @Test
@@ -88,7 +87,6 @@ class FollowServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(follower));
         when(userRepository.findById(2L)).thenReturn(Optional.of(following));
         when(userFollowRepository.existsById(any(UserFollowId.class))).thenReturn(true);
-        when(redisLockService.acquireLock(any(String.class), any(Integer.class))).thenReturn("lock-value");
 
         assertThatThrownBy(() -> followService.follow(request))
                 .isInstanceOf(AlreadyFollowedException.class);
@@ -107,13 +105,12 @@ class FollowServiceTest {
         userFollow.setFollowing(following);
 
         when(userFollowRepository.findById(followId)).thenReturn(Optional.of(userFollow));
-        when(redisLockService.acquireLock(any(String.class), any(Integer.class))).thenReturn("lock-value");
 
         followService.unfollow(request);
 
         verify(userFollowRepository).delete(userFollow);
-        verify(followMapper).decrementFollowing(1L, 2L);
-        verify(followMapper).decrementFollowers(2L, 1L);
+        verify(profileRepository).incrementFollowingCount(1L, -1);
+        verify(profileRepository).incrementFollowersCount(2L, -1);
     }
 
     @Test

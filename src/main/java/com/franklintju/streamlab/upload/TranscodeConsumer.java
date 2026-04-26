@@ -1,9 +1,9 @@
 package com.franklintju.streamlab.upload;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.franklintju.streamlab.config.KafkaConfig;
 import com.franklintju.streamlab.videos.Video;
 import com.franklintju.streamlab.videos.VideoRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -89,7 +89,7 @@ public class TranscodeConsumer {
                     video.setResolution(hlsResult.resolution());
                     video.setBitrate(hlsResult.bitrate());
                     video.setDuration(hlsResult.duration());
-                    log.info("视频 {} 时长设置为: {} 秒", video.getId(), hlsResult.duration());
+                    log.info("视频 {} 时长已更新为 {} 秒", video.getId(), hlsResult.duration());
                 }
 
                 video.setStatus(Video.VideoStatus.READY);
