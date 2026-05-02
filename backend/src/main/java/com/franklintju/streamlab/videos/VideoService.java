@@ -4,8 +4,10 @@ import com.franklintju.streamlab.auth.AuthService;
 import com.franklintju.streamlab.exceptions.VideoNotFoundException;
 import com.franklintju.streamlab.upload.UploadTask;
 import com.franklintju.streamlab.upload.UploadTaskRepository;
+import com.franklintju.streamlab.videos.mapper.VideoMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class VideoService {
     private final UploadTaskRepository uploadTaskRepository;
     private final AuthService authService;
     private final VideoStatsRedisService videoStatsRedisService;
+    private final VideoMapper videoMapper;
 
     @Transactional
     public VideoDto updateVideo(Long id, UpdateVideoRequest request) {
@@ -62,16 +65,10 @@ public class VideoService {
         boolean isOwner = currentUserId != null && currentUserId.equals(userId);
 
         if (isOwner) {
-            return videoRepository.findByUserId(userId)
-                    .stream()
-                    .map(videoConverter::toDto)
-                    .toList();
+            return videoMapper.findVideosByUserId(userId);
         }
 
-        return videoRepository.findByUserIdAndStatus(userId, Video.VideoStatus.PUBLIC)
-                .stream()
-                .map(videoConverter::toDto)
-                .toList();
+        return videoMapper.findPublicVideosByUserId(userId);
     }
 
     public VideoDto getVideo(Long id) {
@@ -122,8 +119,9 @@ public class VideoService {
 
     public Page<VideoDto> listVideos(int page, int size) {
         var pageable = PageRequest.of(page, size);
-        return videoRepository.findByStatus(Video.VideoStatus.PUBLIC, pageable)
-                .map(videoConverter::toDto);
+        var videos = videoMapper.findPublicVideos((int) pageable.getOffset(), pageable.getPageSize());
+        var total = videoMapper.countPublicVideos();
+        return new PageImpl<>(videos, pageable, total);
     }
 
     @Transactional

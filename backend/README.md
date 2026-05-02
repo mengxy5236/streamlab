@@ -1,6 +1,6 @@
 # StreamLab Backend
 
-StreamLab backend is a Spring Boot prototype for a video platform inspired by Bilibili. It covers authentication, video metadata management, upload and transcoding, comments, likes, follows, watch history, danmaku, Redis counters, and scheduled data synchronization.
+StreamLab backend is a Spring Boot prototype for a video platform. It covers authentication, video metadata management, upload and transcoding, comments, likes, follows, watch history, Redis counters, and scheduled data synchronization.
 
 ## Highlights
 
@@ -10,7 +10,7 @@ StreamLab backend is a Spring Boot prototype for a video platform inspired by Bi
 - Redis for counters, cache, progress, and lightweight coordination
 - OSS based media storage
 - FFmpeg based HLS transcoding
-- Kafka used only for asynchronous video transcoding
+- RabbitMQ used only for asynchronous video transcoding
 
 ## Current Scope
 
@@ -19,12 +19,11 @@ Implemented modules:
 - user registration, login, refresh token, and profile management
 - video draft creation, update, publish, and listing
 - source video upload and cover upload
-- Kafka-driven transcode task handling
+- RabbitMQ-driven transcode task handling
 - HLS metadata persistence
 - video likes and comment likes
 - follow system
 - watch history and playback progress
-- danmaku persistence and websocket support
 
 ## Project Structure
 
@@ -37,7 +36,6 @@ backend/
 │   │   │   ├── comment/
 │   │   │   ├── common/
 │   │   │   ├── config/
-│   │   │   ├── danmaku/
 │   │   │   ├── follow/
 │   │   │   ├── history/
 │   │   │   ├── interaction/
@@ -75,7 +73,11 @@ REDIS_PORT
 REDIS_PASSWORD
 OSS_ACCESS_KEY_ID
 OSS_ACCESS_KEY_SECRET
-KAFKA_BOOTSTRAP_SERVERS
+RABBITMQ_HOST
+RABBITMQ_PORT
+RABBITMQ_USERNAME
+RABBITMQ_PASSWORD
+RABBITMQ_VHOST
 ```
 
 ### 2. Build
@@ -98,10 +100,10 @@ Windows:
 
 ## Runtime Notes
 
-- Redis counters for views, likes, and danmaku are synced back into MySQL by scheduled jobs.
+- Redis counters for views and likes are synced back into MySQL by scheduled jobs.
 - Upload task lookup is authenticated and owner-checked.
 - Password change is restricted to the current user.
-- Likes, comment likes, and view count updates no longer depend on Kafka.
+- Likes, comment likes, and view count updates no longer depend on a message queue.
 
 ## Documentation
 

@@ -22,12 +22,11 @@ StreamLab uses MySQL with Flyway migrations under `src/main/resources/db/migrati
 - `video_likes`: who liked which video
 - `comments`: tree-structured comments with `parent_id` and `root_id`
 - `comment_likes`: who liked which comment
-- `danmaku`: danmaku messages with send time and style fields
 - `watch_histories`: last watch progress per user and video
 
 ## Notes
 
-- Counters such as views, likes, and danmaku are buffered in Redis and synced back to MySQL by scheduled jobs.
+- Counters such as views and likes are buffered in Redis and synced back to MySQL by scheduled jobs.
 - Follow counts are denormalized on `profiles` for faster reads.
 - Comment threads use `root_id` for paginated reply loading.
 - HLS-related fields live on `videos`, including `hls_url`, `hls_ready`, `duration`, `resolution`, and `bitrate`.

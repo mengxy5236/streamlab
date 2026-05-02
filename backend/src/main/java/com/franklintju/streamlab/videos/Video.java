@@ -65,10 +65,6 @@ public class Video {
     @Column(name = "comments_count", nullable = false)
     private int commentsCount = 0;
 
-    @Column(name = "danmaku_count", nullable = false)
-    private int danmakuCount = 0;
-
-
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private VideoStatus status = VideoStatus.DRAFT;
@@ -145,16 +141,6 @@ public class Video {
     public void removeComment() {
         if (this.commentsCount > 0) {
             this.commentsCount--;
-        }
-    }
-
-    public void addDanmaku() {
-        this.danmakuCount++;
-    }
-
-    public void removeDanmaku() {
-        if (this.danmakuCount > 0) {
-            this.danmakuCount--;
         }
     }
 

@@ -93,11 +93,11 @@ public class WebSocketAuthConfig implements WebSocketMessageBrokerConfigurer {
                                 accessor.setUser(authentication);
                                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                                log.debug("WebSocket 用户认证成功, userId: {}", userId);
+                                log.debug("WebSocket user authenticated, userId: {}", userId);
                             }
                         }
                     } catch (Exception e) {
-                        log.warn("WebSocket 认证失败: {}", e.getMessage());
+                        log.warn("WebSocket authentication failed: {}", e.getMessage());
                     }
                 }
             }

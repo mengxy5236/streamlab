@@ -4,6 +4,7 @@ import com.franklintju.streamlab.auth.AuthService;
 import com.franklintju.streamlab.exceptions.VideoNotFoundException;
 import com.franklintju.streamlab.upload.UploadTaskRepository;
 import com.franklintju.streamlab.users.User;
+import com.franklintju.streamlab.videos.mapper.VideoMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -37,6 +39,8 @@ class VideoServiceTest {
     private AuthService authService;
     @Mock
     private VideoStatsRedisService videoStatsRedisService;
+    @Mock
+    private VideoMapper videoMapper;
     @InjectMocks
     private VideoService videoService;
 
@@ -64,7 +68,7 @@ class VideoServiceTest {
 
         when(authService.getCurrentUser()).thenReturn(owner);
         when(videoRepository.save(any(Video.class))).thenReturn(video);
-        when(videoConverter.toDto(video)).thenReturn(new VideoDto());
+        when(videoConverter.toDto(any(Video.class))).thenReturn(new VideoDto());
 
         VideoDto result = videoService.createVideo(request);
 
@@ -81,13 +85,15 @@ class VideoServiceTest {
 
         when(authService.getCurrentUser()).thenReturn(owner);
         when(videoRepository.findById(100L)).thenReturn(Optional.of(video));
-        when(videoRepository.save(any(Video.class))).thenReturn(video);
         when(videoConverter.toDto(video)).thenReturn(new VideoDto());
 
         VideoDto result = videoService.updateVideo(100L, request);
 
         assertThat(result).isNotNull();
-        verify(videoRepository).save(video);
+        assertThat(video.getTitle()).isEqualTo("Updated Title");
+        assertThat(video.getDescription()).isEqualTo("Updated Desc");
+        assertThat(video.getVideoUrl()).isEqualTo("http://example.com/video.mp4");
+        verify(videoRepository, never()).save(video);
     }
 
     @Test
@@ -150,12 +156,11 @@ class VideoServiceTest {
 
     @Test
     void shouldIncrementViewCount() {
-        when(videoRepository.findById(100L)).thenReturn(Optional.of(video));
+        when(videoRepository.existsById(100L)).thenReturn(true);
 
         videoService.incrementViewCount(100L);
 
-        assertThat(video.getViewsCount()).isEqualTo(1);
-        verify(videoRepository).save(video);
+        verify(videoStatsRedisService).incrementViews(100L, 1);
     }
 
     @Test
@@ -169,10 +174,10 @@ class VideoServiceTest {
     @Test
     void shouldReturnPublicVideos() {
         PageRequest pageable = PageRequest.of(0, 10);
-        Page<Video> page = new PageImpl<>(List.of(video));
+        VideoDto dto = new VideoDto();
 
-        when(videoRepository.findByStatus(Video.VideoStatus.PUBLIC, pageable)).thenReturn(page);
-        when(videoConverter.toDto(video)).thenReturn(new VideoDto());
+        when(videoMapper.findPublicVideos(0, 10)).thenReturn(List.of(dto));
+        when(videoMapper.countPublicVideos()).thenReturn(1L);
 
         Page<VideoDto> result = videoService.listVideos(0, 10);
 
@@ -181,9 +186,9 @@ class VideoServiceTest {
 
     @Test
     void shouldReturnOwnerVideos() {
+        VideoDto dto = new VideoDto();
         when(authService.getCurrentUser()).thenReturn(owner);
-        when(videoRepository.findByUserId(1L)).thenReturn(List.of(video));
-        when(videoConverter.toDto(video)).thenReturn(new VideoDto());
+        when(videoMapper.findVideosByUserId(1L)).thenReturn(List.of(dto));
 
         List<VideoDto> result = videoService.getVideosByUser(1L);
 

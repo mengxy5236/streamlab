@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.franklintju.streamlab.videos.mapper.VideoMapper">
+
+    <resultMap id="VideoDtoMap" type="com.franklintju.streamlab.videos.VideoDto">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="description" column="description"/>
+        <result property="coverUrl" column="cover_url"/>
+        <result property="videoUrl" column="video_url"/>
+        <result property="hlsUrl" column="hls_url"/>
+        <result property="hlsReady" column="is_hls_ready"/>
+        <result property="resolution" column="resolution"/>
+        <result property="bitrate" column="bitrate"/>
+        <result property="duration" column="duration"/>
+        <result property="updatedAt" column="updated_at"/>
+        <result property="publishedAt" column="published_at"/>
+    </resultMap>
+
+    <sql id="VideoDtoColumns">
+        v.id,
+        v.title,
+        v.description,
+        v.cover_url,
+        v.video_url,
+        v.hls_url,
+        v.is_hls_ready,
+        v.resolution,
+        v.bitrate,
+        v.duration,
+        v.updated_at,
+        v.published_at
+    </sql>
+
+    <select id="findVideosByUserId" resultMap="VideoDtoMap">
+        select
+        <include refid="VideoDtoColumns"/>
+        from videos v
+        where v.user_id = #{userId}
+          and v.status != 'DELETED'
+        order by v.updated_at desc
+    </select>
+
+    <select id="findPublicVideosByUserId" resultMap="VideoDtoMap">
+        select
+        <include refid="VideoDtoColumns"/>
+        from videos v
+        where v.user_id = #{userId}
+          and v.status = 'PUBLIC'
+        order by v.published_at desc, v.updated_at desc
+    </select>
+
+    <select id="findPublicVideos" resultMap="VideoDtoMap">
+        select
+        <include refid="VideoDtoColumns"/>
+        from videos v
+        where v.status = 'PUBLIC'
+        order by v.published_at desc, v.updated_at desc
+        limit #{size} offset #{offset}
+    </select>
+
+    <select id="countPublicVideos" resultType="long">
+        select count(*)
+        from videos v
+        where v.status = 'PUBLIC'
+    </select>
+
+    <select id="existsByUserId" resultType="boolean">
+        select exists(
+            select 1
+            from users u
+            where u.id = #{userId}
+        )
+    </select>
+
+</mapper>

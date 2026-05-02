@@ -7,7 +7,7 @@ This document explains the media pipeline used by StreamLab.
 1. The client creates a draft video through `/api/videos`.
 2. The client uploads the original source file through `/api/upload/{videoId}`.
 3. The backend uploads the source file to OSS and creates an `upload_tasks` record.
-4. The backend sends a Kafka message for asynchronous transcoding.
+4. The backend sends a RabbitMQ message for asynchronous transcoding.
 5. `TranscodeConsumer` receives the task and starts HLS conversion.
 6. After conversion, HLS artifacts are uploaded to OSS and the `videos` record is updated.
 
@@ -48,8 +48,8 @@ Relevant video fields include:
 
 ## 5. Current Implementation Notes
 
-- Kafka is now used only for video transcoding.
-- Likes, comment likes, and view counters no longer use Kafka.
+- RabbitMQ is now used only for video transcoding.
+- Likes, comment likes, and view counters no longer use a message queue.
 - Playback counters are buffered in Redis and synced to MySQL on a schedule.
 - The transcode task supports retries through `TranscodeMessage`.
 

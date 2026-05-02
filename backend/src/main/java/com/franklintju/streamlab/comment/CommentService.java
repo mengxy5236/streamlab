@@ -10,6 +10,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,8 +61,34 @@ public class CommentService {
     }
 
     @Transactional
+    public Comment updateComment(Long userId, Long commentId, String content) {
+        Comment comment = commentRepository.findById(commentId).orElseThrow();
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("No permission to update this comment");
+        }
+        comment.setContent(content);
+        Comment saved = commentRepository.save(comment);
+        evictVideoCommentsCache(comment.getVideo().getId());
+        return saved;
+    }
+
+    @Transactional
     public void deleteComment(Long commentId) {
         Comment comment = commentRepository.findById(commentId).orElseThrow();
+        Long videoId = comment.getVideo().getId();
+        if (comment.getParent() != null) {
+            commentRepository.updateReplyCount(comment.getParent().getId(), -1);
+        }
+        commentRepository.delete(comment);
+        evictVideoCommentsCache(videoId);
+    }
+
+    @Transactional
+    public void deleteComment(Long userId, Long commentId) {
+        Comment comment = commentRepository.findById(commentId).orElseThrow();
+        if (!comment.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("No permission to delete this comment");
+        }
         Long videoId = comment.getVideo().getId();
         if (comment.getParent() != null) {
             commentRepository.updateReplyCount(comment.getParent().getId(), -1);

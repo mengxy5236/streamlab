@@ -1,29 +1,38 @@
 interface HeroProps {
   videoCount: number;
+  personalVideoCount: number;
+  historyCount: number;
+  onGoStudio: () => void;
 }
 
-export function Hero({ videoCount }: HeroProps) {
+export function Hero({ videoCount, personalVideoCount, historyCount, onGoStudio }: HeroProps) {
   return (
     <section className="hero-grid">
       <div className="hero-copy card-surface hero-card">
-        <div className="eyebrow">Creator-ready video backend</div>
-        <h1>Minimal luxury on the surface. Quiet engineering underneath.</h1>
+        <div className="eyebrow">Personal video space</div>
+        <h1>Quiet on the eyes. Ready for your own uploads.</h1>
         <p>
-          A calm, cinema-inspired interface for exploring your Spring Boot video platform.
-          Soft glass, restrained red accents, and buttery transitions keep the focus on content.
+          StreamLab now leans into a daily-use shape: browse what is public, jump back into your
+          watch history, and push new drafts through a polished creator flow.
         </p>
+        <div className="hero-actions">
+          <button className="primary-button" onClick={onGoStudio}>
+            Open Studio
+          </button>
+          <button className="ghost-button">Keep the mood minimal</button>
+        </div>
         <div className="hero-stats">
           <div>
             <strong>{videoCount}</strong>
-            <span>Published videos</span>
+            <span>Public videos</span>
           </div>
           <div>
-            <strong>HLS</strong>
-            <span>Streaming-ready pipeline</span>
+            <strong>{personalVideoCount}</strong>
+            <span>Your uploads</span>
           </div>
           <div>
-            <strong>JWT</strong>
-            <span>Typed auth flow</span>
+            <strong>{historyCount}</strong>
+            <span>Resume-ready items</span>
           </div>
         </div>
       </div>
@@ -32,14 +41,19 @@ export function Hero({ videoCount }: HeroProps) {
         <div className="hero-preview">
           <div className="preview-bezel">
             <div className="preview-screen">
-              <div className="preview-badge">Featured Interface</div>
-              <div className="preview-line preview-line-large" />
-              <div className="preview-line" />
-              <div className="preview-line preview-line-short" />
-              <div className="preview-thumbs">
-                <div />
-                <div />
-                <div />
+              <div className="preview-badge">Studio Snapshot</div>
+              <div className="preview-pane">
+                <div className="preview-column">
+                  <div className="preview-line preview-line-large" />
+                  <div className="preview-line" />
+                  <div className="preview-line preview-line-short" />
+                </div>
+                <div className="preview-card-grid">
+                  <div />
+                  <div />
+                  <div />
+                  <div />
+                </div>
               </div>
             </div>
           </div>

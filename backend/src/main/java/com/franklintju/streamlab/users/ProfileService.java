@@ -3,6 +3,7 @@ package com.franklintju.streamlab.users;
 import com.franklintju.streamlab.auth.AuthService;
 import com.franklintju.streamlab.exceptions.UserNotFoundException;
 import lombok.AllArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,10 @@ public class ProfileService {
 
     @Transactional
     public void update(Long id, UpdateProfileRequest request) {
+        User currentUser = authService.getCurrentUser();
+        if (currentUser == null || !id.equals(currentUser.getId())) {
+            throw new AccessDeniedException("No permission to update this profile");
+        }
 
         Profile profile = profileRepository.findByUserId(id).orElseThrow(UserNotFoundException::new);
 

@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @MapperScan(value = {
         "com.franklintju.streamlab.follow.mapper",
-        "com.franklintju.streamlab.users.mapper"
+        "com.franklintju.streamlab.videos.mapper"
 })
 public class StreamlabApplication {
 

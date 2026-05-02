@@ -1,24 +1,50 @@
-import type { Comment, Video } from "../types/api";
-import { formatDuration, formatRelativeDate } from "../lib/format";
+import { useEffect, useRef } from "react";
 import { CommentList } from "../components/CommentList";
+import { VideoCard } from "../components/VideoCard";
+import { formatDuration, formatRelativeDate } from "../lib/format";
+import type { Comment, Video } from "../types/api";
 
 interface VideoPageProps {
   video: Video | null;
   comments: Comment[];
+  relatedVideos: Video[];
   loading: boolean;
   commentsLoading: boolean;
   error: string | null;
+  resumeSeconds: number;
   onBack: () => void;
+  onOpenVideo: (id: number) => void;
+  onRecordProgress: (progress: number, duration: number) => void;
 }
 
 export function VideoPage({
   video,
   comments,
+  relatedVideos,
   loading,
   commentsLoading,
   error,
-  onBack
+  resumeSeconds,
+  onBack,
+  onOpenVideo,
+  onRecordProgress
 }: VideoPageProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (!videoRef.current || !resumeSeconds) {
+      return;
+    }
+    const player = videoRef.current;
+    const handleLoaded = () => {
+      if (resumeSeconds > 0 && player.currentTime < 1) {
+        player.currentTime = resumeSeconds;
+      }
+    };
+    player.addEventListener("loadedmetadata", handleLoaded);
+    return () => player.removeEventListener("loadedmetadata", handleLoaded);
+  }, [resumeSeconds, video?.id]);
+
   if (loading) {
     return <div className="detail-skeleton card-surface" />;
   }
@@ -47,11 +73,26 @@ export function VideoPage({
         <div className="player-card card-surface">
           <div className="player-stage">
             {playbackUrl ? (
-              video.hlsUrl ? (
-                <video controls playsInline preload="metadata" src={playbackUrl} />
-              ) : (
-                <video controls playsInline preload="metadata" src={playbackUrl} />
-              )
+              <video
+                ref={videoRef}
+                controls
+                playsInline
+                preload="metadata"
+                src={playbackUrl}
+                poster={video.coverUrl || undefined}
+                onPause={(event) =>
+                  onRecordProgress(
+                    Math.floor(event.currentTarget.currentTime || 0),
+                    Math.floor(event.currentTarget.duration || 0)
+                  )
+                }
+                onEnded={(event) =>
+                  onRecordProgress(
+                    Math.floor(event.currentTarget.duration || 0),
+                    Math.floor(event.currentTarget.duration || 0)
+                  )
+                }
+              />
             ) : (
               <div className="player-placeholder">
                 <span>Playback source not ready yet</span>
@@ -67,6 +108,7 @@ export function VideoPage({
               <span>{video.hlsReady ? "Streaming ready" : "Processing or source-only"}</span>
               <span>{formatDuration(video.duration)}</span>
               <span>{formatRelativeDate(video.publishedAt ?? video.updatedAt)}</span>
+              {resumeSeconds > 0 ? <span>Resume at {formatDuration(resumeSeconds)}</span> : null}
             </div>
           </div>
         </div>
@@ -82,10 +124,10 @@ export function VideoPage({
           </div>
 
           <div className="info-panel card-surface accent-panel">
-            <div className="eyebrow">Tone</div>
+            <div className="eyebrow">Why it feels better</div>
             <p>
-              The interface keeps the iOS calmness in spacing and motion, while the restrained red
-              signal gives it a creator-platform pulse.
+              The page is built to feel more like your own private watchroom than a loud public feed:
+              large player, quiet spacing, and just enough red to keep it alive.
             </p>
           </div>
         </aside>
@@ -107,6 +149,19 @@ export function VideoPage({
       ) : (
         <CommentList comments={comments} />
       )}
+
+      <section className="section-header">
+        <div>
+          <div className="eyebrow">More to open</div>
+          <h2>Related surfaces from your current library</h2>
+        </div>
+      </section>
+
+      <div className="video-grid compact-grid">
+        {relatedVideos.map((item) => (
+          <VideoCard key={item.id} video={item} onOpen={onOpenVideo} />
+        ))}
+      </div>
     </div>
   );
 }

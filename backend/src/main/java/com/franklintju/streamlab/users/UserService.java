@@ -3,8 +3,8 @@ package com.franklintju.streamlab.users;
 import com.franklintju.streamlab.auth.AuthService;
 import com.franklintju.streamlab.exceptions.DuplicateUserException;
 import com.franklintju.streamlab.exceptions.UserNotFoundException;
-import com.franklintju.streamlab.users.mapper.UserMapper;
 import com.franklintju.streamlab.videos.VideoDto;
+import com.franklintju.streamlab.videos.mapper.VideoMapper;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -22,7 +22,7 @@ public class UserService {
     private final UserConverter userConverter;
     private final PasswordEncoder passwordEncoder;
     private final ProfileRepository profileRepository;
-    private final UserMapper userMapper;
+    private final VideoMapper videoMapper;
     private final AuthService authService;
 
     @Transactional
@@ -94,6 +94,6 @@ public class UserService {
             throw new UserNotFoundException();
         }
 
-        return userMapper.getVideosByUserId(id);
+        return videoMapper.findVideosByUserId(id);
     }
 }

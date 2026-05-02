@@ -36,14 +36,14 @@ public class CommentController {
     @Operation(summary = "更新评论")
     @PutMapping("/{id}")
     public ApiResponse<CommentDto> updateComment(@PathVariable Long id, @RequestBody Map<String, String> request) {
-        Comment comment = commentService.updateComment(id, request.get("content"));
+        Comment comment = commentService.updateComment(getCurrentUserId(), id, request.get("content"));
         return ApiResponse.success(commentConverter.toDto(comment));
     }
 
     @Operation(summary = "删除评论")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteComment(@PathVariable Long id) {
-        commentService.deleteComment(id);
+        commentService.deleteComment(getCurrentUserId(), id);
         return ApiResponse.success(null);
     }
 

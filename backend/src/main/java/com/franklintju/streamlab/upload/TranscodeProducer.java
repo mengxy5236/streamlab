@@ -1,54 +1,57 @@
 package com.franklintju.streamlab.upload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.franklintju.streamlab.config.KafkaConfig;
+import com.franklintju.streamlab.config.RabbitMqConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.CompletableFuture;
+import java.time.Instant;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "streamlab.transcode", name = "messaging-enabled", havingValue = "true")
 public class TranscodeProducer {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
-    private final ObjectMapper objectMapper;
+    private final RabbitTemplate rabbitTemplate;
+    @Qualifier("transcodeRetryScheduler")
+    private final TaskScheduler retryScheduler;
 
     public void sendTranscodeMessage(TranscodeMessage message) {
         try {
-            String jsonMessage = objectMapper.writeValueAsString(message);
-            kafkaTemplate.send(KafkaConfig.VIDEO_TRANSCODE_TOPIC, jsonMessage);
-            log.info("发送转码消息成功: uploadTaskId={}, videoId={}",
+            rabbitTemplate.convertAndSend(
+                    RabbitMqConfig.VIDEO_TRANSCODE_EXCHANGE,
+                    RabbitMqConfig.VIDEO_TRANSCODE_ROUTING_KEY,
+                    message
+            );
+            log.info("Sent transcode message: uploadTaskId={}, videoId={}",
                     message.getUploadTaskId(), message.getVideoId());
         } catch (Exception e) {
-            log.error("发送转码消息失败", e);
-            throw new RuntimeException("发送转码消息失败: " + e.getMessage(), e);
+            log.error("Failed to send transcode message: uploadTaskId={}", message.getUploadTaskId(), e);
+            throw new RuntimeException("Failed to send transcode message: " + e.getMessage(), e);
         }
     }
 
     public void sendTranscodeMessageWithDelay(TranscodeMessage message) {
-        try {
-            String jsonMessage = objectMapper.writeValueAsString(message);
-            long delayMs = calculateBackoff(message.getRetryCount());
-
-            CompletableFuture<SendResult<String, String>> future =
-                    kafkaTemplate.send(KafkaConfig.VIDEO_TRANSCODE_TOPIC, jsonMessage);
-
-            future.whenComplete((result, ex) -> {
-                if (ex != null) {
-                    log.error("延迟转码消息发送失败: uploadTaskId={}", message.getUploadTaskId(), ex);
-                } else {
-                    log.info("延迟重试转码消息已发送: uploadTaskId={}, videoId={}, retryCount={}, delayMs={}",
-                            message.getUploadTaskId(), message.getVideoId(), message.getRetryCount(), delayMs);
-                }
-            });
-        } catch (Exception e) {
-            log.error("延迟重试转码消息发送异常: uploadTaskId={}", message.getUploadTaskId(), e);
-        }
+        long delayMs = calculateBackoff(message.getRetryCount());
+        retryScheduler.schedule(() -> {
+            try {
+                sendTranscodeMessage(message);
+                log.info("Scheduled retry sent: uploadTaskId={}, retryCount={}, delayMs={}",
+                        message.getUploadTaskId(), message.getRetryCount(), delayMs);
+            } catch (Exception e) {
+                log.error("Failed to send scheduled retry: uploadTaskId={}", message.getUploadTaskId(), e);
+                rabbitTemplate.convertAndSend(
+                        RabbitMqConfig.VIDEO_TRANSCODE_DLQ_EXCHANGE,
+                        RabbitMqConfig.VIDEO_TRANSCODE_DLQ_ROUTING_KEY,
+                        message.withError(e.getMessage())
+                );
+            }
+        }, Instant.now().plusMillis(delayMs));
     }
 
     private long calculateBackoff(int retryCount) {

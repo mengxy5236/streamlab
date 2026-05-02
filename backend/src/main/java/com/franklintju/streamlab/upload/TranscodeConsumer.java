@@ -1,18 +1,19 @@
 package com.franklintju.streamlab.upload;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.franklintju.streamlab.config.KafkaConfig;
+import com.franklintju.streamlab.config.RabbitMqConfig;
 import com.franklintju.streamlab.videos.Video;
 import com.franklintju.streamlab.videos.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "streamlab.transcode", name = "messaging-enabled", havingValue = "true")
 public class TranscodeConsumer {
 
     private final UploadTaskRepository uploadTaskRepository;
@@ -20,22 +21,13 @@ public class TranscodeConsumer {
     private final HlsService hlsService;
     private final TranscodeProgressService transcodeProgressService;
     private final TranscodeProducer transcodeProducer;
-    private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = KafkaConfig.VIDEO_TRANSCODE_TOPIC, groupId = "streamlab-group",
-                   containerFactory = "kafkaListenerContainerFactory")
+    @RabbitListener(queues = RabbitMqConfig.VIDEO_TRANSCODE_QUEUE)
     @Transactional
-    public void handleTranscodeMessage(String message) {
-        try {
-            TranscodeMessage transcodeMessage = objectMapper.readValue(message, TranscodeMessage.class);
-            log.info("收到转码消息: uploadTaskId={}, videoId={}, retryCount={}",
-                    transcodeMessage.getUploadTaskId(), transcodeMessage.getVideoId(), transcodeMessage.getRetryCount());
-
-            processVideo(transcodeMessage);
-
-        } catch (Exception e) {
-            log.error("转码消息解析失败: {}", message, e);
-        }
+    public void handleTranscodeMessage(TranscodeMessage transcodeMessage) {
+        log.info("Received transcode message: uploadTaskId={}, videoId={}, retryCount={}",
+                transcodeMessage.getUploadTaskId(), transcodeMessage.getVideoId(), transcodeMessage.getRetryCount());
+        processVideo(transcodeMessage);
     }
 
     private void processVideo(TranscodeMessage transcodeMessage) {
@@ -53,30 +45,32 @@ public class TranscodeConsumer {
             task.setProgress(5);
             uploadTaskRepository.save(task);
 
-            transcodeProgressService.sendProgress(videoId, 5, "PROCESSING", "开始处理视频");
+            transcodeProgressService.sendProgress(videoId, 5, "PROCESSING", "Started processing video");
 
             HlsService.HlsResult hlsResult = null;
 
             if (hlsService.isHlsSupported()) {
                 try {
-                    log.info("开始 HLS 转码: videoId={}, ossUrl={}", videoId, ossUrl);
+                    log.info("Starting HLS transcode: videoId={}, ossUrl={}", videoId, ossUrl);
 
                     task.setProgress(10);
                     uploadTaskRepository.save(task);
-                    transcodeProgressService.sendProgress(videoId, 10, "PROCESSING", "开始 HLS 转码");
+                    transcodeProgressService.sendProgress(videoId, 10, "PROCESSING", "Starting HLS transcode");
 
                     hlsResult = hlsService.convertToHls(ossUrl, videoId);
 
-                    log.info("HLS 转码完成: hlsUrl={}, duration={}s",
+                    log.info("HLS transcode completed: hlsUrl={}, duration={}s",
                             hlsResult.hlsUrl(), hlsResult.duration());
                 } catch (Exception e) {
-                    log.error("HLS 转码失败: {}", e.getMessage());
-                    transcodeProgressService.sendProgress(videoId, task.getProgress(), "FAILED", "HLS 转码失败: " + e.getMessage());
+                    log.error("HLS transcode failed: {}", e.getMessage());
+                    transcodeProgressService.sendProgress(videoId, task.getProgress(), "FAILED",
+                            "HLS transcode failed: " + e.getMessage());
                     throw e;
                 }
             } else {
-                log.warn("FFmpeg 不可用，跳过 HLS 转码");
-                transcodeProgressService.sendProgress(videoId, task.getProgress(), "PROCESSING", "FFmpeg 不可用，跳过 HLS 转码");
+                log.warn("FFmpeg is unavailable; skipping HLS transcode");
+                transcodeProgressService.sendProgress(videoId, task.getProgress(), "PROCESSING",
+                        "FFmpeg is unavailable; skipping HLS transcode");
             }
 
             var video = videoRepository.findById(videoId).orElse(null);
@@ -89,7 +83,7 @@ public class TranscodeConsumer {
                     video.setResolution(hlsResult.resolution());
                     video.setBitrate(hlsResult.bitrate());
                     video.setDuration(hlsResult.duration());
-                    log.info("视频 {} 时长已更新为 {} 秒", video.getId(), hlsResult.duration());
+                    log.info("Updated video duration: videoId={}, duration={}s", video.getId(), hlsResult.duration());
                 }
 
                 video.setStatus(Video.VideoStatus.READY);
@@ -104,26 +98,25 @@ public class TranscodeConsumer {
                             .videoId(videoId)
                             .progress(100)
                             .status("SUCCESS")
-                            .message("转码完成")
+                            .message("Transcode completed")
                             .hlsUrl(hlsResult != null ? hlsResult.hlsUrl() : null)
                             .duration(hlsResult != null ? hlsResult.duration() : null)
                             .build()
             );
-
         } catch (Exception e) {
             log.error("Video processing failed: uploadTaskId={}", transcodeMessage.getUploadTaskId(), e);
 
             if (transcodeMessage.canRetry()) {
                 TranscodeMessage retryMessage = transcodeMessage.withIncrementedRetry();
-                log.info("准备重试转码: uploadTaskId={}, attempt={}/{}",
+                log.info("Scheduling transcode retry: uploadTaskId={}, attempt={}/{}",
                         retryMessage.getUploadTaskId(), retryMessage.getRetryCount(), TranscodeMessage.MAX_RETRY);
                 transcodeProducer.sendTranscodeMessageWithDelay(retryMessage);
             } else {
-                log.error("转码重试次数耗尽，标记为失败: uploadTaskId={}", transcodeMessage.getUploadTaskId());
+                log.error("Transcode retries exhausted: uploadTaskId={}", transcodeMessage.getUploadTaskId());
                 task.setStatus(UploadTask.TaskStatus.FAILED);
-                task.setErrorMessage("转码失败，已重试 " + TranscodeMessage.MAX_RETRY + " 次: " + e.getMessage());
+                task.setErrorMessage("Transcode failed after " + TranscodeMessage.MAX_RETRY + " retries: " + e.getMessage());
                 transcodeProgressService.sendProgress(videoId, task.getProgress(), "FAILED",
-                        "转码失败，已重试 " + TranscodeMessage.MAX_RETRY + " 次");
+                        "Transcode failed after " + TranscodeMessage.MAX_RETRY + " retries");
             }
         }
 

@@ -32,7 +32,6 @@ public class StatsSyncScheduler {
     public void syncVideoStatsToDatabase() {
         syncViews();
         syncLikes();
-        syncDanmaku();
     }
 
     private void syncViews() {
@@ -72,27 +71,6 @@ public class StatsSyncScheduler {
                     log.info("同步点赞数到数据库: videoId={}, likes={}", videoId, likes);
                 } catch (Exception e) {
                     log.error("同步点赞数失败: videoId={}", videoId, e);
-                }
-            }
-        }
-    }
-
-    private void syncDanmaku() {
-        Set<String> danmakuKeys = videoStatsRedisService.getAllVideoDanmakuKeys();
-        for (String key : danmakuKeys) {
-            Long videoId = extractVideoId(key);
-            if (videoId == null) {
-                continue;
-            }
-
-            Long danmaku = videoStatsRedisService.getDanmaku(videoId);
-            if (danmaku != 0) {
-                try {
-                    videoRepository.incrementDanmaku(videoId, danmaku.intValue());
-                    videoStatsRedisService.clearDanmakuStats(videoId);
-                    log.info("同步弹幕数到数据库: videoId={}, danmaku={}", videoId, danmaku);
-                } catch (Exception e) {
-                    log.error("同步弹幕数失败: videoId={}", videoId, e);
                 }
             }
         }

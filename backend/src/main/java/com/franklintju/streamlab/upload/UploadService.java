@@ -1,11 +1,13 @@
 package com.franklintju.streamlab.upload;
 
 import com.franklintju.streamlab.auth.AuthService;
-import com.franklintju.streamlab.oss.OssService;
 import com.franklintju.streamlab.exceptions.VideoNotFoundException;
+import com.franklintju.streamlab.oss.OssService;
 import com.franklintju.streamlab.videos.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,7 +41,10 @@ public class UploadService {
     private final VideoProcessor videoProcessor;
     private final OssService ossService;
     private final AuthService authService;
-    private final TranscodeProducer transcodeProducer;
+    private final ObjectProvider<TranscodeProducer> transcodeProducerProvider;
+
+    @Value("${streamlab.transcode.messaging-enabled:false}")
+    private boolean messagingEnabled;
 
     @Transactional
     public Map<String, Object> uploadVideo(Long videoId, MultipartFile file) {
@@ -47,11 +52,11 @@ public class UploadService {
         var video = videoRepository.findById(videoId).orElseThrow(VideoNotFoundException::new);
 
         if (!video.getUser().getId().equals(user.getId())) {
-            throw new SecurityException("无权上传此视频");
+            throw new SecurityException("No permission to upload to this video");
         }
 
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("文件不能为空");
+            throw new IllegalArgumentException("File cannot be empty");
         }
 
         String contentType = file.getContentType();
@@ -59,7 +64,7 @@ public class UploadService {
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase() : "";
 
         if (contentType == null || !ALLOWED_VIDEO_TYPES.contains(contentType) || !ALLOWED_VIDEO_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("不支持的视频格式，仅支持 MP4/AVI/MOV/MKV/WEBM");
+            throw new IllegalArgumentException("Unsupported video format, only MP4/AVI/MOV/MKV/WEBM are allowed");
         }
 
         try {
@@ -73,26 +78,33 @@ public class UploadService {
             task.setProgress(0);
             uploadTaskRepository.save(task);
 
-            // 发送 Kafka 消息触发异步转码
-            TranscodeMessage transcodeMessage = new TranscodeMessage(
-                    task.getId(),
-                    videoId,
-                    ossUrl,
-                    user.getId()
-            );
-            transcodeProducer.sendTranscodeMessage(transcodeMessage);
+            if (messagingEnabled) {
+                TranscodeMessage transcodeMessage = new TranscodeMessage(
+                        task.getId(),
+                        videoId,
+                        ossUrl,
+                        user.getId()
+                );
+                var producer = transcodeProducerProvider.getIfAvailable();
+                if (producer == null) {
+                    throw new IllegalStateException("Transcode messaging is enabled but no producer is available");
+                }
+                producer.sendTranscodeMessage(transcodeMessage);
+            } else {
+                videoProcessor.processVideo(task.getId());
+            }
 
             Map<String, Object> result = new HashMap<>();
             result.put("taskId", task.getId());
             result.put("videoId", videoId);
             result.put("status", task.getStatus().name());
             result.put("videoUrl", ossUrl);
+            result.put("mode", messagingEnabled ? "rabbitmq" : "local-async");
 
             return result;
-
         } catch (IOException e) {
             log.error("File upload failed: {}", videoId, e);
-            throw new RuntimeException("文件上传失败: " + e.getMessage());
+            throw new RuntimeException("File upload failed: " + e.getMessage());
         }
     }
 
@@ -101,18 +113,18 @@ public class UploadService {
         var video = videoRepository.findById(videoId).orElseThrow(VideoNotFoundException::new);
 
         if (!video.getUser().getId().equals(user.getId())) {
-            throw new SecurityException("无权上传此封面");
+            throw new SecurityException("No permission to upload the cover for this video");
         }
 
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("文件不能为空");
+            throw new IllegalArgumentException("File cannot be empty");
         }
         String contentType = file.getContentType();
         String originalFilename = file.getOriginalFilename();
         String extension = originalFilename != null ? originalFilename.substring(originalFilename.lastIndexOf(".")).toLowerCase() : "";
 
         if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType) || !ALLOWED_IMAGE_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("不支持的图片格式，仅支持 JPG/PNG/GIF/WEBP");
+            throw new IllegalArgumentException("Unsupported image format, only JPG/PNG/GIF/WEBP are allowed");
         }
 
         try {
@@ -125,14 +137,14 @@ public class UploadService {
             return result;
         } catch (IOException e) {
             log.error("Cover upload failed: {}", videoId, e);
-            throw new RuntimeException("封面上传失败: " + e.getMessage());
+            throw new RuntimeException("Cover upload failed: " + e.getMessage());
         }
     }
 
     public UploadTaskDto getTask(Long taskId) {
         var user = authService.getCurrentUser();
         if (user == null) {
-            throw new AccessDeniedException("请先登录");
+            throw new AccessDeniedException("Please sign in first");
         }
 
         var task = uploadTaskRepository.findById(taskId).orElse(null);
@@ -140,7 +152,7 @@ public class UploadService {
             return null;
         }
         if (!user.getId().equals(task.getUserId())) {
-            throw new AccessDeniedException("无权查看该上传任务");
+            throw new AccessDeniedException("No permission to view this upload task");
         }
         return UploadTaskDto.fromEntity(task);
     }

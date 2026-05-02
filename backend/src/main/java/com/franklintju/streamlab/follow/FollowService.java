@@ -26,18 +26,21 @@ public class FollowService {
     private final ProfileRepository profileRepository;
     private final FollowMapper followMapper;
 
-    @DistributedLock(key = "user:follow:#request.followingId", expireSeconds = 10, message = "系统繁忙，请稍后重试")
+    @DistributedLock(key = "user:follow:#request.followingId", expireSeconds = 10, message = "System is busy, please try again later")
     @Transactional
     public void follow(FollowRequest request) {
-        if (request.getFollowerId().equals(request.getFollowingId())) {
-            throw new IllegalStateException("不能关注自己");
+        follow(request.getFollowerId(), request.getFollowingId());
+    }
+
+    @DistributedLock(key = "user:follow:#followingId", expireSeconds = 10, message = "System is busy, please try again later")
+    @Transactional
+    public void follow(Long followerId, Long followingId) {
+        if (followerId.equals(followingId)) {
+            throw new IllegalStateException("Cannot follow yourself");
         }
 
-        User follower = userRepository.findById(request.getFollowerId())
-                .orElseThrow(UserNotFoundException::new);
-        User following = userRepository.findById(request.getFollowingId())
-                .orElseThrow(UserNotFoundException::new);
-
+        User follower = userRepository.findById(followerId).orElseThrow(UserNotFoundException::new);
+        User following = userRepository.findById(followingId).orElseThrow(UserNotFoundException::new);
         UserFollowId followId = new UserFollowId(follower.getId(), following.getId());
 
         if (userFollowRepository.existsById(followId)) {
@@ -60,23 +63,29 @@ public class FollowService {
         }
     }
 
-    @DistributedLock(key = "user:follow:#request.followingId", expireSeconds = 10, message = "系统繁忙，请稍后重试")
+    @DistributedLock(key = "user:follow:#request.followingId", expireSeconds = 10, message = "System is busy, please try again later")
     @Transactional
     public void unfollow(FollowRequest request) {
-        if (request.getFollowerId().equals(request.getFollowingId())) {
-            throw new IllegalStateException("不能取消关注自己");
+        unfollow(request.getFollowerId(), request.getFollowingId());
+    }
+
+    @DistributedLock(key = "user:follow:#followingId", expireSeconds = 10, message = "System is busy, please try again later")
+    @Transactional
+    public void unfollow(Long followerId, Long followingId) {
+        if (followerId.equals(followingId)) {
+            throw new IllegalStateException("Cannot unfollow yourself");
         }
 
-        UserFollowId followId = new UserFollowId(request.getFollowerId(), request.getFollowingId());
+        UserFollowId followId = new UserFollowId(followerId, followingId);
         UserFollow userFollow = userFollowRepository.findById(followId)
                 .orElseThrow(NotFollowedException::new);
 
         userFollowRepository.delete(userFollow);
 
-        profileRepository.incrementFollowingCount(request.getFollowerId(), -1);
-        profileRepository.incrementFollowersCount(request.getFollowingId(), -1);
+        profileRepository.incrementFollowingCount(followerId, -1);
+        profileRepository.incrementFollowersCount(followingId, -1);
 
-        log.info("User {} unfollowed user {}", request.getFollowerId(), request.getFollowingId());
+        log.info("User {} unfollowed user {}", followerId, followingId);
     }
 
     @Transactional(readOnly = true)

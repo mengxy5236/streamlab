@@ -18,7 +18,6 @@ public class VideoStatsRedisService {
 
     private static final String VIDEO_VIEWS_KEY = "video:views:";
     private static final String VIDEO_LIKES_KEY = "video:likes:";
-    private static final String VIDEO_DANMAKU_KEY = "video:danmaku:";
     private static final Duration STATS_TTL = Duration.ofDays(30);
 
     public void incrementViews(Long videoId, long delta) {
@@ -29,12 +28,6 @@ public class VideoStatsRedisService {
 
     public void incrementLikes(Long videoId, long delta) {
         String key = VIDEO_LIKES_KEY + videoId;
-        redisTemplate.opsForValue().increment(key, delta);
-        redisTemplate.expire(key, STATS_TTL.toDays(), TimeUnit.DAYS);
-    }
-
-    public void incrementDanmaku(Long videoId, long delta) {
-        String key = VIDEO_DANMAKU_KEY + videoId;
         redisTemplate.opsForValue().increment(key, delta);
         redisTemplate.expire(key, STATS_TTL.toDays(), TimeUnit.DAYS);
     }
@@ -51,16 +44,9 @@ public class VideoStatsRedisService {
         return value != null ? Long.parseLong(value.toString()) : 0L;
     }
 
-    public Long getDanmaku(Long videoId) {
-        String key = VIDEO_DANMAKU_KEY + videoId;
-        Object value = redisTemplate.opsForValue().get(key);
-        return value != null ? Long.parseLong(value.toString()) : 0L;
-    }
-
     public void clearStats(Long videoId) {
         redisTemplate.delete(VIDEO_VIEWS_KEY + videoId);
         redisTemplate.delete(VIDEO_LIKES_KEY + videoId);
-        redisTemplate.delete(VIDEO_DANMAKU_KEY + videoId);
     }
 
     public void clearViewStats(Long videoId) {
@@ -71,10 +57,6 @@ public class VideoStatsRedisService {
         redisTemplate.delete(VIDEO_LIKES_KEY + videoId);
     }
 
-    public void clearDanmakuStats(Long videoId) {
-        redisTemplate.delete(VIDEO_DANMAKU_KEY + videoId);
-    }
-
     public Set<String> getAllVideoViewKeys() {
         return redisTemplate.keys(VIDEO_VIEWS_KEY + "*");
     }
@@ -83,7 +65,4 @@ public class VideoStatsRedisService {
         return redisTemplate.keys(VIDEO_LIKES_KEY + "*");
     }
 
-    public Set<String> getAllVideoDanmakuKeys() {
-        return redisTemplate.keys(VIDEO_DANMAKU_KEY + "*");
-    }
 }

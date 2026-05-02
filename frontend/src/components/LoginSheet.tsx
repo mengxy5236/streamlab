@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface LoginSheetProps {
   open: boolean;
@@ -18,6 +18,12 @@ export function LoginSheet({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  useEffect(() => {
+    if (!open) {
+      setPassword("");
+    }
+  }, [open]);
+
   if (!open) {
     return null;
   }
@@ -28,9 +34,9 @@ export function LoginSheet({
         <div className="sheet-header">
           <div>
             <div className="eyebrow">Account access</div>
-            <h2>Sign in to unlock creator actions</h2>
+            <h2>Sign in to unlock studio actions</h2>
           </div>
-          <button className="ghost-button" onClick={onClose}>
+          <button className="ghost-button compact-button" onClick={onClose}>
             Close
           </button>
         </div>
@@ -57,7 +63,7 @@ export function LoginSheet({
             <span>Password</span>
             <input
               type="password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               required

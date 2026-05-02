@@ -75,7 +75,7 @@ class FollowServiceTest {
 
         assertThatThrownBy(() -> followService.follow(request))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("非法 follow 调用！");
+                .hasMessage("Cannot follow yourself");
     }
 
     @Test
